@@ -4,6 +4,8 @@ Notice: This is very much a work in progress. In fact, this is the first project
 
 This work is licensed under Apache 2.0.
 
+Generated Documentation is available from https://alexbishop.github.io/L-systems/docs
+
 The intention of this project is to formalise the concepts and properties of EDT0L and ET0L languages in order to prove the results in the following papers.
 
 [1] Alex Bishop, <a href="https://sites.google.com/site/melderau" target="_blank">Murray Elder</a>, <a href="https://sites.google.com/view/aevetts/home" target="_blank">Alex Evetts</a>, <a href="https://chercheurs.lille.inria.fr/pgallot/" target="_blank">Paul Gallot</a> and <a href="https://alex-a-levine.github.io/" target="_blank">Alex Levine</a> (2025). "On groups with EDT0L word problem." <a href="https://arxiv.org/abs/2505.20057" target="_blank">arXiv:2505.20057</a>
