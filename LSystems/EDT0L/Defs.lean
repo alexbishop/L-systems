@@ -23,8 +23,8 @@ Suppose we are given some word `w : List (Symbol T N)`, then we may apply a tabl
 `τ : N → List (Symbol T N)` by replacing each nonterminal in `w` with the corresponding word
 given by `τ`, and leaving all the terminal letters along.
 
-Let `E` be an EDT0L grammar. Then, a word `w : List T` is then accepted by the grammar
-if the word `w.map .terminal` can be reached from the initial word `[.nonterminal E.intial]`
+Let `E` be an EDT0L grammar. Then, a word `w : List T` is then accepted by the grammar if the word
+`w.map Symbol.terminal` can be reached from the initial word `[Symbol.nonterminal E.intial]`
 by applying a finite sequence of tables. The set of all such words is known as an EDT0L language.
 -/
 
