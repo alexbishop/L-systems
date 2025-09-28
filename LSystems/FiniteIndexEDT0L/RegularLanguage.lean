@@ -20,7 +20,6 @@ lemma terminal_word_count {T N : Type*} (w : List T) :
 
 theorem regular_languages_are_fi_edt0l {T : Type*} [Fintype T] (L : Language T) :
     L.IsRegular → L.IsEDT0LOfIndex 1 := by
-
   unfold Language.IsRegular
   intro h
   have ⟨ _, _, M, h₁ ⟩ := h
