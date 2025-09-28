@@ -11,7 +11,6 @@ namespace DeriveSequence
 lemma derives_seq_refl (w : List (Symbol T N)) :
     E.DeriveSequence [] w = w := rfl
 
-@[simp]
 lemma rewrite_word_iff_derive_seq_singleton (w : List (Symbol T N)) (τ : H) :
     E.RewriteWord τ w = E.DeriveSequence [τ] w := rfl
 
@@ -28,7 +27,6 @@ lemma rewrites_iff_derive_seq_singleton (w w' : List (Symbol T N)) :
     rw [← rewrite_word_iff_derive_seq_singleton] at h
     exact ⟨τ, h⟩
 
-@[simp]
 lemma derives_iff_derive_seq (w w' : List (Symbol T N)) :
     E.Derives w w' ↔ ∃ s : List H, E.DeriveSequence s w = w' := by
   --
