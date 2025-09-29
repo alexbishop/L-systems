@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Alex Bishop. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Author: Alex Bishop
+-/
 import LSystems.EDT0L.Defs
 
 theorem trivial_EDT0L_grammars {T N H : Type*} [Fintype H] [Fintype N] [IsEmpty H]
