@@ -1,15 +1,37 @@
 import LSystems.EDT0L.Defs
 
 namespace EDT0LGrammar
-variable {T N H : Type*} [Fintype N] [Fintype H]
-variable (E : EDT0LGrammar T N H)
+variable {T N H : Type*}
 
 def SymbolIsNonterminal {T N : Type*} : Symbol T N → Bool
   | .terminal _ => false
   | .nonterminal _ => true
 
+section SymbolIsNonterminal
+
+lemma SymbolIsNonterminal_nonterminal (n : N) :
+    (@SymbolIsNonterminal T N) (.nonterminal n) = true := rfl
+
+lemma SymbolIsNonterminal_terminal (t : T) :
+    (@SymbolIsNonterminal T N) (.terminal t) = false := rfl
+
+lemma SymbolIsNonterminal_single_nonterminal (n : N) :
+    List.countP (@SymbolIsNonterminal T N) [.nonterminal n] = 1 := rfl
+
+end SymbolIsNonterminal
+
+variable [Fintype N] [Fintype H]
+variable (E : EDT0LGrammar T N H)
+
 def IsIndex (k : ℕ) : Prop :=
   ∀ w : List (Symbol T N), E.Generates w → w.countP SymbolIsNonterminal ≤ k
+
+lemma generates_implies_le_index {k : ℕ} (w : List (Symbol T N)) (h : E.IsIndex k) :
+    E.Generates w → List.countP SymbolIsNonterminal w ≤ k := by
+  intro h'
+  unfold IsIndex at h
+  replace h := h w h'
+  exact h
 
 def IsFiniteIndex : Prop := ∃ k : ℕ, E.IsIndex k
 
@@ -27,8 +49,11 @@ end EDT0LGrammar
 def Language.IsEDT0LOfIndex {α : Type*} (L : Language α) (k : ℕ) : Prop :=
   ∃ n m : ℕ, ∃ E : EDT0LGrammar α (Fin n) (Fin m), ∃ _ : E.IsIndex k, E.language = L
 
-def Language.IsFiEDT0L {α : Type*} (L : Language α) : Prop :=
+def Language.IsFiniteIndexEDT0L {α : Type*} (L : Language α) : Prop :=
   ∃ k : ℕ, L.IsEDT0LOfIndex k
+
+lemma edt0l_of_index_implies_finite_index {α : Type*} (L : Language α) (k : ℕ) :
+    L.IsEDT0LOfIndex k → L.IsFiniteIndexEDT0L := fun h ↦ ⟨k, h⟩
 
 namespace EDT0LGrammar
 variable {T N H : Type*} [Fintype N] [Fintype H]
@@ -79,7 +104,7 @@ theorem fi_edt0l_grammars_generate_fi_edt0l_languages' {T N H : Type*} [Fintype 
 
 theorem fi_edt0l_grammars_generate_fi_edt0l_languages {T N H : Type*} [Fintype N] [Fintype H]
   (E : EDT0LGrammar T N H) (h : E.IsFiniteIndex) :
-    E.language.IsFiEDT0L := by
+    E.language.IsFiniteIndexEDT0L := by
   replace ⟨k, h⟩ := h
   exact ⟨k, fi_edt0l_grammars_generate_fi_edt0l_languages' E h⟩
 

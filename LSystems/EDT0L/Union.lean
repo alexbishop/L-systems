@@ -18,8 +18,27 @@ def extend_alphabet₁ : Symbol T N₁ → Symbol T ((N₀ ⊕ N₁) ⊕ Unit)
   | .terminal t => .terminal t
   | .nonterminal n => .nonterminal (.inl (.inr n))
 
+section extend_alphabets
+variable {T N₀ N₁ : Type*}
+
 @[simp]
-lemma extend_alphabet₀.leave_terminals {T N₀ N₁ : Type*} (w : List T) :
+lemma extend_alphabet₀_terminal (t : T) :
+    @extend_alphabet₀ T N₀ N₁ (.terminal t) = (.terminal t) := rfl
+
+@[simp]
+lemma extend_alphabet₁_terminal (t : T) :
+    @extend_alphabet₁ T N₀ N₁ (.terminal t) = (.terminal t) := rfl
+
+@[simp]
+lemma extend_alphabet₀_nonterminal (n : N₀) :
+    @extend_alphabet₀ T N₀ N₁ (.nonterminal n) = (.nonterminal <| .inl <| .inl <| n) := rfl
+
+@[simp]
+lemma extend_alphabet₁_nonterminal (n : N₁) :
+    @extend_alphabet₁ T N₀ N₁ (.nonterminal n) = (.nonterminal <| .inl <| .inr <| n) := rfl
+
+@[simp]
+lemma extend_alphabet₀_terminal_word (w : List T) :
     List.map (@extend_alphabet₀ T N₀ N₁) (List.map .terminal w)
     = List.map .terminal w := by
   --
@@ -33,7 +52,7 @@ lemma extend_alphabet₀.leave_terminals {T N₀ N₁ : Type*} (w : List T) :
     rfl
 
 @[simp]
-lemma extend_alphabet₁.leave_terminals {T N₀ N₁ : Type*} (w : List T) :
+lemma extend_alphabet₁_terminal_word (w : List T) :
     List.map (@extend_alphabet₁ T N₀ N₁) (List.map .terminal w)
     = List.map .terminal w := by
   --
@@ -45,6 +64,8 @@ lemma extend_alphabet₁.leave_terminals {T N₀ N₁ : Type*} (w : List T) :
       Function.comp_apply, List.map_cons, List.cons.injEq, implies_true,
       and_true]
     rfl
+
+end extend_alphabets
 
 def grammar : EDT0LGrammar T ((N₀ ⊕ N₁) ⊕ Unit) ((H₀ ⊕ H₁) ⊕ Fin 2) where
   initial := .inr ()
@@ -890,11 +911,11 @@ theorem defines_union : 𝓖.grammar.language = 𝓖.E₀.language + 𝓖.E₁.l
       cases h
       · rename_i h
         have hh := 𝓖.basic_property₀ _ h
-        rw [extend_alphabet₀.leave_terminals] at hh
+        rw [extend_alphabet₀_terminal_word] at hh
         exact hh
       · rename_i h
         have hh := 𝓖.basic_property₁ _ h
-        rw [extend_alphabet₁.leave_terminals] at hh
+        rw [extend_alphabet₁_terminal_word] at hh
         exact hh
   exact Language.ext_iff.mpr h
 
