@@ -1,3 +1,4 @@
 import LSystems.FiniteIndexEDT0L.Defs
 import LSystems.FiniteIndexEDT0L.LULT
 import LSystems.FiniteIndexEDT0L.RegularLanguage
+import LSystems.FiniteIndexEDT0L.Union
