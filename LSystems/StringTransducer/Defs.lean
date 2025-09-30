@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Alex Bishop. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Author: Alex Bishop
+-/
 import Mathlib.Computability.Language
 
 structure StringTransducer (α β σ : Type*) [Fintype α] [Fintype β] [Fintype σ] where
