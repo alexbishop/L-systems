@@ -1,8 +1,9 @@
 # L systems
 
-Notice: This is very much a work in progress. In fact, this is the first project that I am writing in Lean.
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-This work is licensed under Apache 2.0.
+> [!NOTE]
+> This is very much a work in progress. In fact, this is the first project that I am writing in Lean.
 
 Generated Documentation is available from https://alexbishop.github.io/L-systems/docs
 
