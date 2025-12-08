@@ -7,30 +7,30 @@ import LSystems.EDT0L.Defs
 
 namespace EDT0LGrammar
 
-structure DFAData (T Q : Type*) [Fintype T] [Fintype Q] where
-  M : DFA T Q
+structure DFAData (α Q : Type*) [Fintype α] [Fintype Q] where
+  M : DFA α Q
 
 namespace DFAData
-variable {T Q : Type*} [Fintype T] [Fintype Q]
-variable (𝓓 : DFAData T Q)
+variable {α Q : Type*} [Fintype α] [Fintype Q]
+variable (data : DFAData α Q)
 
-noncomputable def grammar : EDT0LGrammar T Q (T ⊕ Unit) where
-  initial := 𝓓.M.start
+noncomputable def grammar : EDT0LGrammar α Q (α ⊕ Unit) where
+  initial := data.M.start
   tables := fun h ↦ match h with
     | .inl t =>
-      fun (q : Q) ↦ [Symbol.terminal t, Symbol.nonterminal (𝓓.M.step q t)]
+      fun (q : Q) ↦ [Symbol.terminal t, Symbol.nonterminal (data.M.step q t)]
     | .inr _ => fun (q : Q) =>
-      have _prop_dec (q : Q) : Decidable (q ∈ 𝓓.M.accept) := Classical.propDecidable _
-      if q ∈ 𝓓.M.accept then [] else [ .nonterminal q ]
+      have _prop_dec (q : Q) : Decidable (q ∈ data.M.accept) := Classical.propDecidable _
+      if q ∈ data.M.accept then [] else [ .nonterminal q ]
 
-lemma generated_words (w : List (Symbol T Q)) :
-  𝓓.grammar.Generates w → ∃ u : List T,
-    (u.map .terminal = w ∧ 𝓓.M.evalFrom 𝓓.M.start u ∈ 𝓓.M.accept)
-    ∨ (w = (u.map .terminal) ++ [.nonterminal (𝓓.M.evalFrom 𝓓.M.start u)]) := by 
+lemma generated_words (w : List (Symbol α Q)) :
+  data.grammar.generates w → ∃ u : List α,
+    (u.map .terminal = w ∧ data.M.evalFrom data.M.start u ∈ data.M.accept)
+    ∨ (w = (u.map .terminal) ++ [.nonterminal (data.M.evalFrom data.M.start u)]) := by 
   --
   intro h
-  unfold EDT0LGrammar.Generates at h
-  unfold EDT0LGrammar.Derives at h
+  unfold EDT0LGrammar.generates at h
+  unfold EDT0LGrammar.derives at h
   induction h
   case refl =>
     use []
@@ -44,7 +44,7 @@ lemma generated_words (w : List (Symbol T Q)) :
     case inl ih₃ =>
       replace ⟨ih₃, ih₄⟩ := ih₃
       subst ih₃
-      replace ih₂ := EDT0LGrammar.Rewrites.terminal_word 𝓓.grammar ih₂
+      replace ih₂ := EDT0LGrammar.rewrites_terminals data.grammar ih₂
       subst ih₂
       use u
       left
@@ -52,9 +52,9 @@ lemma generated_words (w : List (Symbol T Q)) :
       · rfl
       · exact ih₄ 
     case inr ih₃ => 
-      unfold EDT0LGrammar.Rewrites at ih₂
-      unfold EDT0LGrammar.RewriteWord at ih₂
-      unfold EDT0LGrammar.RewriteSymbol at ih₂
+      unfold EDT0LGrammar.rewrites at ih₂
+      unfold EDT0LGrammar.rewriteWord at ih₂
+      unfold EDT0LGrammar.rewriteSymbol at ih₂
       replace ⟨τ, ih₂⟩ := ih₂
       cases τ
       case inl τ => 
@@ -76,7 +76,7 @@ lemma generated_words (w : List (Symbol T Q)) :
           simp_all only [List.map_cons, List.flatMap_cons, List.cons_append, List.nil_append]
       case inr τ =>
         use u
-        by_cases h : 𝓓.M.evalFrom 𝓓.M.start u ∈ 𝓓.M.accept
+        by_cases h : data.M.evalFrom data.M.start u ∈ data.M.accept
         · left
           constructor
           · rw [ih₃] at ih₂
@@ -121,7 +121,7 @@ lemma generated_words (w : List (Symbol T Q)) :
           conv =>
             lhs
             rhs
-            change [Symbol.nonterminal (𝓓.M.evalFrom 𝓓.M.start u)]
+            change [Symbol.nonterminal (data.M.evalFrom data.M.start u)]
           rw [List.flatMap_map]
           simp only [List.append_cancel_right_eq]
           clear h
@@ -130,27 +130,29 @@ lemma generated_words (w : List (Symbol T Q)) :
           · rename_i a as ih
             simp_all only [List.map_cons, List.flatMap_cons, List.cons_append, List.nil_append]
 
-lemma generated_words' (w : List T) :
-  𝓓.grammar.Generates ((w.map .terminal) ++ [.nonterminal (𝓓.M.evalFrom 𝓓.M.start w)]) := by 
+lemma generated_words' (w : List α) :
+  data.grammar.generates (
+    (w.map .terminal)
+      ++ [.nonterminal (data.M.evalFrom data.M.start w)]) := by 
   --
-  unfold EDT0LGrammar.Generates
-  unfold EDT0LGrammar.Derives
+  unfold EDT0LGrammar.generates
+  unfold EDT0LGrammar.derives
   induction w using List.reverseRecOn with
   | nil =>
     simp_all only [List.map_nil, DFA.evalFrom_nil, List.nil_append]
     rfl
   | append_singleton as a h =>
     have h' :
-      𝓓.grammar.Rewrites
+      data.grammar.rewrites
         (List.map Symbol.terminal as
-          ++ [Symbol.nonterminal (𝓓.M.evalFrom 𝓓.M.start as)])
+          ++ [Symbol.nonterminal (data.M.evalFrom data.M.start as)])
         (List.map Symbol.terminal (as ++ [a])
-          ++ [Symbol.nonterminal (𝓓.M.evalFrom 𝓓.M.start (as ++ [a]))]) := by
+          ++ [Symbol.nonterminal (data.M.evalFrom data.M.start (as ++ [a]))]) := by
       --
-      unfold EDT0LGrammar.Rewrites
+      unfold EDT0LGrammar.rewrites
       use .inl a
-      unfold EDT0LGrammar.RewriteWord
-      unfold EDT0LGrammar.RewriteSymbol
+      unfold EDT0LGrammar.rewriteWord
+      unfold EDT0LGrammar.rewriteSymbol
       unfold DFAData.grammar
       simp only 
       rw [List.flatMap_append]
@@ -166,20 +168,19 @@ lemma generated_words' (w : List T) :
 
     exact Relation.ReflTransGen.tail h h'
 
-theorem languages_are_identical (w : List T) :
-    𝓓.grammar.Generates (w.map .terminal) ↔ 𝓓.M.evalFrom 𝓓.M.start w ∈ 𝓓.M.accept := by
+theorem languages_are_identical (w : List α) :
+    data.grammar.generates (w.map .terminal) ↔ data.M.evalFrom data.M.start w ∈ data.M.accept := by
   --
   constructor
   · intro h
-    replace ⟨u, h⟩ := 𝓓.generated_words (w.map .terminal) h
+    replace ⟨u, h⟩ := data.generated_words (w.map .terminal) h
     cases h
     · rename_i h
       have ⟨left, right⟩ := h
-      --FIXME: The following is very general and showuld be put in its own lemma
       replace left : u = w := by
         clear right
         clear h
-        let f := fun (t : T) ↦ (.terminal t : Symbol T Q)
+        let f := fun (a : α) ↦ (.terminal a : Symbol α Q)
         have hh : Function.Injective f := by
           unfold Function.Injective
           intro a₁ a₂ a
@@ -192,12 +193,11 @@ theorem languages_are_identical (w : List T) :
     · rename_i h
       exfalso
       have h' : List.getLast (w.map Symbol.terminal)
-                -- the following is a proof that the list is nonempty
                 (by
                   simp_all only [
                     ne_eq, List.append_eq_nil_iff, List.map_eq_nil_iff,
                     List.cons_ne_self, and_false, not_false_eq_true])
-              = .nonterminal (𝓓.M.evalFrom 𝓓.M.start u) := by
+              = .nonterminal (data.M.evalFrom data.M.start u) := by
         --
         simp_all only [ne_eq, List.cons_ne_self, not_false_eq_true, List.getLast_append_of_ne_nil,
           List.getLast_singleton]
@@ -205,14 +205,14 @@ theorem languages_are_identical (w : List T) :
       simp only [List.getLast_map] at h'
       simp_all only [reduceCtorEq]
   · intro h
-    have h' := 𝓓.generated_words' w
-    unfold EDT0LGrammar.Generates
-    unfold EDT0LGrammar.Derives
+    have h' := data.generated_words' w
+    unfold EDT0LGrammar.generates
+    unfold EDT0LGrammar.derives
     apply Relation.ReflTransGen.tail h' ?_
-    unfold EDT0LGrammar.Rewrites
+    unfold EDT0LGrammar.rewrites
     use .inr ()
-    unfold EDT0LGrammar.RewriteWord
-    unfold EDT0LGrammar.RewriteSymbol
+    unfold EDT0LGrammar.rewriteWord
+    unfold EDT0LGrammar.rewriteSymbol
     unfold DFAData.grammar
     simp only
     rw [List.flatMap_append]
@@ -229,24 +229,24 @@ theorem languages_are_identical (w : List T) :
 
 end DFAData
 
-theorem regular_languages_are_edt0l {T : Type*} [Fintype T] (L : Language T) :
+theorem regular_languages_are_edt0l {α : Type*} [Fintype α] (L : Language α) :
     L.IsRegular → L.IsEDT0L := by
   --
   unfold Language.IsRegular
   intro h
   have ⟨ _, _, M, h₁ ⟩ := h
   --
-  let 𝓓 := DFAData.mk M
-  have h₂ := 𝓓.languages_are_identical
+  let data := DFAData.mk M
+  have h₂ := data.languages_are_identical
 
-  let E := 𝓓.grammar
+  let E := data.grammar
 
   have h₃ : E.language = M.accepts := by
     unfold EDT0LGrammar.language
     unfold DFA.accepts
     unfold DFA.acceptsFrom
     subst h₁
-    simp_all only [exists_const_iff, 𝓓, E]
+    simp_all only [exists_const_iff, data, E]
 
   rw [h₁] at h₃
   rw [← h₃]

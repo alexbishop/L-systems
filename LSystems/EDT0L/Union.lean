@@ -6,50 +6,51 @@ Author: Alex Bishop
 import LSystems.EDT0L.Defs
 
 namespace EDT0LGrammar
-variable {T N₀ H₀ N₁ H₁ : Type*} [Fintype N₀] [Fintype H₀] [Fintype N₁] [Fintype H₁]
+variable {α V₀ T₀ V₁ T₁ : Type*} [Fintype V₀] [Fintype T₀] [Fintype V₁] [Fintype T₁]
 
 structure UnionData where
-  E₀ : EDT0LGrammar T N₀ H₀
-  E₁ : EDT0LGrammar T N₁ H₁
+  E₀ : EDT0LGrammar α V₀ T₀
+  E₁ : EDT0LGrammar α V₁ T₁
 
 namespace UnionData
-variable (𝓖 : @UnionData T N₀ H₀ N₁ H₁ _ _ _ _)
+variable (data : @UnionData α V₀ T₀ V₁ T₁ _ _ _ _)
 
-def extend_alphabet₀ : Symbol T N₀ → Symbol T ((N₀ ⊕ N₁) ⊕ Unit)
-  | .terminal t => .terminal t
-  | .nonterminal n => .nonterminal (.inl (.inl n))
+def extend_alphabet₀ : Symbol α V₀ → Symbol α ((V₀ ⊕ V₁) ⊕ Unit)
+  | .terminal a => .terminal a
+  | .nonterminal v => .nonterminal (.inl (.inl v))
 
-def extend_alphabet₁ : Symbol T N₁ → Symbol T ((N₀ ⊕ N₁) ⊕ Unit)
-  | .terminal t => .terminal t
-  | .nonterminal n => .nonterminal (.inl (.inr n))
+def extend_alphabet₁ : Symbol α V₁ → Symbol α ((V₀ ⊕ V₁) ⊕ Unit)
+  | .terminal a => .terminal a
+  | .nonterminal v => .nonterminal (.inl (.inr v))
 
 section extend_alphabets
-variable {T N₀ N₁ : Type*}
+variable {α V₀ V₁ : Type*}
 
 @[simp]
-lemma extend_alphabet₀_terminal (t : T) :
-    @extend_alphabet₀ T N₀ N₁ (.terminal t) = (.terminal t) := rfl
+lemma extend_alphabet₀_terminal {a : α} :
+    @extend_alphabet₀ α V₀ V₁ (.terminal a) = (.terminal a) := rfl
 
 @[simp]
-lemma extend_alphabet₁_terminal (t : T) :
-    @extend_alphabet₁ T N₀ N₁ (.terminal t) = (.terminal t) := rfl
+lemma extend_alphabet₁_terminal {a : α} :
+    @extend_alphabet₁ α V₀ V₁ (.terminal a) = (.terminal a) := rfl
 
 @[simp]
-lemma extend_alphabet₀_nonterminal (n : N₀) :
-    @extend_alphabet₀ T N₀ N₁ (.nonterminal n) = (.nonterminal <| .inl <| .inl <| n) := rfl
+lemma extend_alphabet₀_nonterminal {v : V₀} :
+    @extend_alphabet₀ α V₀ V₁ (.nonterminal v) = (.nonterminal <| .inl <| .inl <| v) := rfl
 
 @[simp]
-lemma extend_alphabet₁_nonterminal (n : N₁) :
-    @extend_alphabet₁ T N₀ N₁ (.nonterminal n) = (.nonterminal <| .inl <| .inr <| n) := rfl
+lemma extend_alphabet₁_nonterminal {v : V₁} :
+    @extend_alphabet₁ α V₀ V₁ (.nonterminal v) = (.nonterminal <| .inl <| .inr <| v) := rfl
 
 @[simp]
-lemma extend_alphabet₀_terminal_word (w : List T) :
-    List.map (@extend_alphabet₀ T N₀ N₁) (List.map .terminal w)
+lemma extend_alphabet₀_terminal_word {w : List α} :
+    List.map (@extend_alphabet₀ α V₀ V₁) (List.map .terminal w)
     = List.map .terminal w := by
   --
-  induction w
-  · simp only [List.map_nil]
-  · rename_i a as ih
+  induction w with
+  | nil =>
+    simp only [List.map_nil]
+  | cons a as ih =>
     simp_all only [
       List.map_map, List.map_inj_left,
       Function.comp_apply, List.map_cons, List.cons.injEq, implies_true,
@@ -57,13 +58,14 @@ lemma extend_alphabet₀_terminal_word (w : List T) :
     rfl
 
 @[simp]
-lemma extend_alphabet₁_terminal_word (w : List T) :
-    List.map (@extend_alphabet₁ T N₀ N₁) (List.map .terminal w)
+lemma extend_alphabet₁_terminal_word (w : List α) :
+    List.map (@extend_alphabet₁ α V₀ V₁) (List.map .terminal w)
     = List.map .terminal w := by
   --
-  induction w
-  · simp only [List.map_nil]
-  · rename_i a as ih
+  induction w with
+  | nil =>
+    simp only [List.map_nil]
+  | cons a as ih =>
     simp_all only [
       List.map_map, List.map_inj_left,
       Function.comp_apply, List.map_cons, List.cons.injEq, implies_true,
@@ -72,34 +74,34 @@ lemma extend_alphabet₁_terminal_word (w : List T) :
 
 end extend_alphabets
 
-def grammar : EDT0LGrammar T ((N₀ ⊕ N₁) ⊕ Unit) ((H₀ ⊕ H₁) ⊕ Fin 2) where
+def grammar : EDT0LGrammar α ((V₀ ⊕ V₁) ⊕ Unit) ((T₀ ⊕ T₁) ⊕ Fin 2) where
   initial := .inr ()
   tables := fun h n ↦ match h with
     | .inl (.inl τ₀) => match n with
-      | .inl (.inl n₀) => (𝓖.E₀.tables τ₀ n₀).map extend_alphabet₀
+      | .inl (.inl n₀) => (data.E₀.tables τ₀ n₀).map extend_alphabet₀
       | _ => [.nonterminal n]
     | .inl (.inr τ₁) => match n with
-      | .inl (.inr n₁) => (𝓖.E₁.tables τ₁ n₁).map extend_alphabet₁
+      | .inl (.inr n₁) => (data.E₁.tables τ₁ n₁).map extend_alphabet₁
       | _ => [.nonterminal n]
     | .inr 0 => match n with
       | .inl s => [.nonterminal (.inl s)]
-      | .inr _ => [.nonterminal (.inl (.inl 𝓖.E₀.initial))]
+      | .inr _ => [.nonterminal (.inl (.inl data.E₀.initial))]
     | .inr 1 => match n with
       | .inl s => [.nonterminal (.inl s)]
-      | .inr _ => [.nonterminal (.inl (.inr 𝓖.E₁.initial))]
+      | .inr _ => [.nonterminal (.inl (.inr data.E₁.initial))]
 
-lemma left_rewrites (w : List (Symbol T ((N₀ ⊕ N₁) ⊕ Unit)))
-  (w' : List (Symbol T ((N₀ ⊕ N₁) ⊕ Unit)))
-  (h : ∃ u : List (Symbol T N₀), w = u.map extend_alphabet₀ ∧ 𝓖.E₀.Generates u) :
-    𝓖.grammar.Rewrites w w'
-      → ∃ u' : List (Symbol T N₀), w' = u'.map extend_alphabet₀ ∧ 𝓖.E₀.Generates u' := by
+lemma left_rewrites (w : List (Symbol α ((V₀ ⊕ V₁) ⊕ Unit)))
+  (w' : List (Symbol α ((V₀ ⊕ V₁) ⊕ Unit)))
+  (h : ∃ u : List (Symbol α V₀), w = u.map extend_alphabet₀ ∧ data.E₀.generates u) :
+    data.grammar.rewrites w w'
+      → ∃ u' : List (Symbol α V₀), w' = u'.map extend_alphabet₀ ∧ data.E₀.generates u' := by
   --
   intro h₁
   have ⟨u, ⟨h_l, h_r⟩⟩ := h
   clear h
-  unfold EDT0LGrammar.Rewrites at h₁
-  unfold EDT0LGrammar.RewriteWord at h₁
-  unfold EDT0LGrammar.RewriteSymbol at h₁
+  unfold EDT0LGrammar.rewrites at h₁
+  unfold EDT0LGrammar.rewriteWord at h₁
+  unfold EDT0LGrammar.rewriteSymbol at h₁
   unfold UnionData.grammar at h₁
   unfold extend_alphabet₀ at h_l
   simp only at h₁
@@ -114,13 +116,12 @@ lemma left_rewrites (w : List (Symbol T ((N₀ ⊕ N₁) ⊕ Unit)))
         @List.flatMap _ _ inner _ = _
         at h₁
       extract_lets inner at h₁
-      have hh : inner = fun a ↦ List.map extend_alphabet₀ (𝓖.E₀.RewriteSymbol τ₀ a) := by
+      have hh : inner = fun a ↦ List.map extend_alphabet₀ (data.E₀.rewriteSymbol τ₀ a) := by
         unfold extend_alphabet₀
         unfold inner
         funext a
         subst h₁
         clear τ
-        --FIXME aesop?
         split
         · rename_i x t heq
           split at heq
@@ -166,15 +167,15 @@ lemma left_rewrites (w : List (Symbol T ((N₀ ⊕ N₁) ⊕ Unit)))
       use u'
       constructor
       · exact Eq.symm h₁
-      · have hh : 𝓖.E₀.Rewrites u u' := by
+      · have hh : data.E₀.rewrites u u' := by
           use τ₀
-          unfold RewriteWord
+          unfold rewriteWord
           subst u'
           rw [List.flatMap_id', ← List.flatMap_def]
-        unfold EDT0LGrammar.Generates
-        unfold EDT0LGrammar.Generates at h_r
-        unfold EDT0LGrammar.Derives
-        unfold EDT0LGrammar.Derives at h_r
+        unfold EDT0LGrammar.generates
+        unfold EDT0LGrammar.generates at h_r
+        unfold EDT0LGrammar.derives
+        unfold EDT0LGrammar.derives at h_r
         exact Relation.ReflTransGen.tail h_r hh
   | .inl (.inr τ₁) =>
     simp only at h₁
@@ -325,17 +326,17 @@ lemma left_rewrites (w : List (Symbol T ((N₀ ⊕ N₁) ⊕ Unit)))
     · rw [← List.map_eq_flatMap]
     · exact h_r
 
-lemma right_rewrites (w : List (Symbol T ((N₀ ⊕ N₁) ⊕ Unit)))
-  (w' : List (Symbol T ((N₀ ⊕ N₁) ⊕ Unit)))
-  (h : ∃ u : List (Symbol T N₁), w = u.map extend_alphabet₁ ∧ 𝓖.E₁.Generates u) :
-    𝓖.grammar.Rewrites w w'
-      → ∃ u' : List (Symbol T N₁), w' = u'.map extend_alphabet₁ ∧ 𝓖.E₁.Generates u' := by
+lemma right_rewrites (w : List (Symbol α ((V₀ ⊕ V₁) ⊕ Unit)))
+  (w' : List (Symbol α ((V₀ ⊕ V₁) ⊕ Unit)))
+  (h : ∃ u : List (Symbol α V₁), w = u.map extend_alphabet₁ ∧ data.E₁.generates u) :
+    data.grammar.rewrites w w'
+      → ∃ u' : List (Symbol α V₁), w' = u'.map extend_alphabet₁ ∧ data.E₁.generates u' := by
   intro h₁
   have ⟨u, ⟨h_l, h_r⟩⟩ := h
   clear h
-  unfold EDT0LGrammar.Rewrites at h₁
-  unfold EDT0LGrammar.RewriteWord at h₁
-  unfold EDT0LGrammar.RewriteSymbol at h₁
+  unfold EDT0LGrammar.rewrites at h₁
+  unfold EDT0LGrammar.rewriteWord at h₁
+  unfold EDT0LGrammar.rewriteSymbol at h₁
   unfold UnionData.grammar at h₁
   unfold extend_alphabet₁ at h_l
   simp only at h₁
@@ -350,7 +351,7 @@ lemma right_rewrites (w : List (Symbol T ((N₀ ⊕ N₁) ⊕ Unit)))
         @List.flatMap _ _ inner _ = _
         at h₁
       extract_lets inner at h₁
-      have hh : inner = fun a ↦ List.map extend_alphabet₁ (𝓖.E₁.RewriteSymbol τ₁ a) := by
+      have hh : inner = fun a ↦ List.map extend_alphabet₁ (data.E₁.rewriteSymbol τ₁ a) := by
         unfold extend_alphabet₁
         unfold inner
         funext a
@@ -401,15 +402,15 @@ lemma right_rewrites (w : List (Symbol T ((N₀ ⊕ N₁) ⊕ Unit)))
       use u'
       constructor
       · exact Eq.symm h₁
-      · have hh : 𝓖.E₁.Rewrites u u' := by
+      · have hh : data.E₁.rewrites u u' := by
           use τ₁
-          unfold RewriteWord
+          unfold rewriteWord
           subst u'
           rw [List.flatMap_id', ← List.flatMap_def]
-        unfold EDT0LGrammar.Generates
-        unfold EDT0LGrammar.Generates at h_r
-        unfold EDT0LGrammar.Derives
-        unfold EDT0LGrammar.Derives at h_r
+        unfold EDT0LGrammar.generates
+        unfold EDT0LGrammar.generates at h_r
+        unfold EDT0LGrammar.derives
+        unfold EDT0LGrammar.derives at h_r
         exact Relation.ReflTransGen.tail h_r hh
   | .inl (.inl τ₀) =>
     simp only at h₁
@@ -563,11 +564,11 @@ lemma right_rewrites (w : List (Symbol T ((N₀ ⊕ N₁) ⊕ Unit)))
     · exact h_r
 
 lemma basic_property
-  (w : List (Symbol T ((N₀ ⊕ N₁) ⊕ Unit)))
-  (h : 𝓖.grammar.Generates w) :
-    w = [.nonterminal 𝓖.grammar.initial]
-    ∨ (∃ u : List (Symbol T N₀), w = u.map extend_alphabet₀ ∧ 𝓖.E₀.Generates u)
-    ∨ (∃ u : List (Symbol T N₁), w = u.map extend_alphabet₁ ∧ 𝓖.E₁.Generates u) := by
+  (w : List (Symbol α ((V₀ ⊕ V₁) ⊕ Unit)))
+  (h : data.grammar.generates w) :
+    w = [.nonterminal data.grammar.initial]
+    ∨ (∃ u : List (Symbol α V₀), w = u.map extend_alphabet₀ ∧ data.E₀.generates u)
+    ∨ (∃ u : List (Symbol α V₁), w = u.map extend_alphabet₁ ∧ data.E₁.generates u) := by
   --
   induction h
   case refl => left; rfl
@@ -580,84 +581,84 @@ lemma basic_property
       | .inl (.inl τ₀) =>
         left
         rw [← ih₂, ih₃]
-        unfold EDT0LGrammar.RewriteWord
-        unfold EDT0LGrammar.RewriteSymbol
+        unfold EDT0LGrammar.rewriteWord
+        unfold EDT0LGrammar.rewriteSymbol
         unfold UnionData.grammar
         simp only
         rw [List.flatMap_cons, List.flatMap_nil, List.append_nil]
       | .inl (.inr τ₁) =>
         left
         rw [← ih₂, ih₃]
-        unfold EDT0LGrammar.RewriteWord
-        unfold EDT0LGrammar.RewriteSymbol
+        unfold EDT0LGrammar.rewriteWord
+        unfold EDT0LGrammar.rewriteSymbol
         unfold UnionData.grammar
         simp only
         rw [List.flatMap_cons, List.flatMap_nil, List.append_nil]
       | .inr 0 =>
         right ; left
-        use [.nonterminal 𝓖.E₀.initial]
+        use [.nonterminal data.E₀.initial]
         constructor
         · rw [← ih₂, ih₃]
           unfold extend_alphabet₀
-          unfold EDT0LGrammar.RewriteWord
-          unfold EDT0LGrammar.RewriteSymbol
+          unfold EDT0LGrammar.rewriteWord
+          unfold EDT0LGrammar.rewriteSymbol
           unfold UnionData.grammar
           simp only
           rw [List.map_cons, List.map_nil, List.flatMap_cons, List.flatMap_nil, List.append_nil]
-        · unfold EDT0LGrammar.Generates
-          unfold EDT0LGrammar.Derives
+        · unfold EDT0LGrammar.generates
+          unfold EDT0LGrammar.derives
           exact Relation.ReflTransGen.refl
       | .inr 1 =>
         right ; right
-        use [.nonterminal 𝓖.E₁.initial]
+        use [.nonterminal data.E₁.initial]
         constructor
         · rw [← ih₂, ih₃]
           unfold extend_alphabet₁
-          unfold EDT0LGrammar.RewriteWord
-          unfold EDT0LGrammar.RewriteSymbol
+          unfold EDT0LGrammar.rewriteWord
+          unfold EDT0LGrammar.rewriteSymbol
           unfold UnionData.grammar
           simp only
           rw [List.map_cons, List.map_nil, List.flatMap_cons, List.flatMap_nil, List.append_nil]
-        · unfold EDT0LGrammar.Generates
-          unfold EDT0LGrammar.Derives
+        · unfold EDT0LGrammar.generates
+          unfold EDT0LGrammar.derives
           exact Relation.ReflTransGen.refl
     · rename_i ih₃
       cases ih₃
       · rename_i ih₃
         right; left
-        exact 𝓖.left_rewrites a b ih₃ ih₂
+        exact data.left_rewrites a b ih₃ ih₂
       · rename_i ih₃
         right; right
-        exact 𝓖.right_rewrites a b ih₃ ih₂
+        exact data.right_rewrites a b ih₃ ih₂
 
 lemma basic_property₀
-  (w : List (Symbol T N₀))
-  (h : 𝓖.E₀.Generates w) :
-    𝓖.grammar.Generates (w.map extend_alphabet₀) := by
+  (w : List (Symbol α V₀))
+  (h : data.E₀.generates w) :
+    data.grammar.generates (w.map extend_alphabet₀) := by
   --
   induction h
   case refl =>
-    unfold EDT0LGrammar.Generates
-    unfold EDT0LGrammar.Derives
+    unfold EDT0LGrammar.generates
+    unfold EDT0LGrammar.derives
     apply Relation.ReflTransGen.tail (Relation.ReflTransGen.refl) ?_
-    unfold EDT0LGrammar.Rewrites
+    unfold EDT0LGrammar.rewrites
     use .inr 0
-    unfold EDT0LGrammar.RewriteWord
-    unfold EDT0LGrammar.RewriteSymbol
+    unfold EDT0LGrammar.rewriteWord
+    unfold EDT0LGrammar.rewriteSymbol
     unfold UnionData.grammar
     simp only
     unfold extend_alphabet₀
     simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil, List.map_cons, List.map_nil]
   case tail x y z ih₁ ih₂ =>
     have hh :
-        𝓖.grammar.Rewrites
+        data.grammar.rewrites
           (List.map extend_alphabet₀ x)
           (List.map extend_alphabet₀ y) := by
       have ⟨ τ, h ⟩ := ih₁
       rw [← h]
       use .inl (.inl τ)
-      unfold EDT0LGrammar.RewriteWord
-      unfold EDT0LGrammar.RewriteSymbol
+      unfold EDT0LGrammar.rewriteWord
+      unfold EDT0LGrammar.rewriteSymbol
       unfold UnionData.grammar
       --
       unfold extend_alphabet₀
@@ -704,40 +705,40 @@ lemma basic_property₀
               next x_2 t => simp_all only [reduceCtorEq]
               next x_2 n => simp_all only [Symbol.nonterminal.injEq, reduceCtorEq]
       rw [hh]
-    unfold EDT0LGrammar.Generates
-    unfold EDT0LGrammar.Generates at ih₂
-    unfold EDT0LGrammar.Derives
-    unfold EDT0LGrammar.Derives at ih₂
+    unfold EDT0LGrammar.generates
+    unfold EDT0LGrammar.generates at ih₂
+    unfold EDT0LGrammar.derives
+    unfold EDT0LGrammar.derives at ih₂
     exact Relation.ReflTransGen.tail ih₂ hh
 
 lemma basic_property₁
-  (w : List (Symbol T N₁))
-  (h : 𝓖.E₁.Generates w) :
-    𝓖.grammar.Generates (w.map extend_alphabet₁) := by
+  (w : List (Symbol α V₁))
+  (h : data.E₁.generates w) :
+    data.grammar.generates (w.map extend_alphabet₁) := by
   --
   induction h
   case refl =>
-    unfold EDT0LGrammar.Generates
-    unfold EDT0LGrammar.Derives
+    unfold EDT0LGrammar.generates
+    unfold EDT0LGrammar.derives
     apply Relation.ReflTransGen.tail (Relation.ReflTransGen.refl) ?_
-    unfold EDT0LGrammar.Rewrites
+    unfold EDT0LGrammar.rewrites
     use .inr 1
-    unfold EDT0LGrammar.RewriteWord
-    unfold EDT0LGrammar.RewriteSymbol
+    unfold EDT0LGrammar.rewriteWord
+    unfold EDT0LGrammar.rewriteSymbol
     unfold UnionData.grammar
     simp only
     unfold extend_alphabet₁
     simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil, List.map_cons, List.map_nil]
   case tail x y z ih₁ ih₂ =>
     have hh :
-        𝓖.grammar.Rewrites
+        data.grammar.rewrites
           (List.map extend_alphabet₁ x)
           (List.map extend_alphabet₁ y) := by
       have ⟨ τ, h ⟩ := ih₁
       rw [← h]
       use .inl (.inr τ)
-      unfold EDT0LGrammar.RewriteWord
-      unfold EDT0LGrammar.RewriteSymbol
+      unfold EDT0LGrammar.rewriteWord
+      unfold EDT0LGrammar.rewriteSymbol
       unfold UnionData.grammar
       --
       unfold extend_alphabet₁
@@ -784,24 +785,24 @@ lemma basic_property₁
               next x_2 t => simp_all only [reduceCtorEq]
               next x_2 n => simp_all only [Symbol.nonterminal.injEq, reduceCtorEq]
       rw [hh]
-    unfold EDT0LGrammar.Generates
-    unfold EDT0LGrammar.Generates at ih₂
-    unfold EDT0LGrammar.Derives
-    unfold EDT0LGrammar.Derives at ih₂
+    unfold EDT0LGrammar.generates
+    unfold EDT0LGrammar.generates at ih₂
+    unfold EDT0LGrammar.derives
+    unfold EDT0LGrammar.derives at ih₂
     exact Relation.ReflTransGen.tail ih₂ hh
 
-theorem defines_union : 𝓖.grammar.language = 𝓖.E₀.language + 𝓖.E₁.language := by
+theorem defines_union : data.grammar.language = data.E₀.language + data.E₁.language := by
   rw [Language.add_def]
   unfold EDT0LGrammar.language
   --
-  have h (w : List T) :
-      𝓖.grammar.Generates (List.map Symbol.terminal w)
-      ↔ 𝓖.E₀.Generates (List.map Symbol.terminal w)
-        ∨ 𝓖.E₁.Generates (List.map Symbol.terminal w) := by
+  have h (w : List α) :
+      data.grammar.generates (List.map Symbol.terminal w)
+      ↔ data.E₀.generates (List.map Symbol.terminal w)
+        ∨ data.E₁.generates (List.map Symbol.terminal w) := by
     --
     constructor
     · intro h
-      replace h := 𝓖.basic_property _ h
+      replace h := data.basic_property _ h
       match h with
       | .inl h =>
         exfalso
@@ -836,11 +837,11 @@ theorem defines_union : 𝓖.grammar.language = 𝓖.E₀.language + 𝓖.E₁.l
               lhs
               unfold List.map
             replace ih := ih bs
-            have h₁ : Symbol.terminal b = @extend_alphabet₀ T N₀ N₁ a := by
+            have h₁ : Symbol.terminal b = @extend_alphabet₀ α V₀ V₁ a := by
               simp_all only [List.cons.injEq, forall_const]
             have h₂ :
                 List.map Symbol.terminal bs =
-                List.map (@extend_alphabet₀ T N₀ N₁) as := by
+                List.map (@extend_alphabet₀ α V₀ V₁) as := by
               simp_all only [List.cons.injEq, true_and, forall_const]
             replace ih := ih h₂
             rw [← ih]
@@ -888,11 +889,11 @@ theorem defines_union : 𝓖.grammar.language = 𝓖.E₀.language + 𝓖.E₁.l
               lhs
               unfold List.map
             replace ih := ih bs
-            have h₁ : Symbol.terminal b = @extend_alphabet₁ T N₀ N₁ a := by
+            have h₁ : Symbol.terminal b = @extend_alphabet₁ α V₀ V₁ a := by
               simp_all only [List.cons.injEq, forall_const]
             have h₂ :
                 List.map Symbol.terminal bs =
-                List.map (@extend_alphabet₁ T N₀ N₁) as := by
+                List.map (@extend_alphabet₁ α V₀ V₁) as := by
               simp_all only [List.cons.injEq, true_and, forall_const]
             replace ih := ih h₂
             rw [← ih]
@@ -915,18 +916,18 @@ theorem defines_union : 𝓖.grammar.language = 𝓖.E₀.language + 𝓖.E₁.l
     · intro h
       cases h
       · rename_i h
-        have hh := 𝓖.basic_property₀ _ h
+        have hh := data.basic_property₀ _ h
         rw [extend_alphabet₀_terminal_word] at hh
         exact hh
       · rename_i h
-        have hh := 𝓖.basic_property₁ _ h
+        have hh := data.basic_property₁ _ h
         rw [extend_alphabet₁_terminal_word] at hh
         exact hh
   exact Language.ext_iff.mpr h
 
 end UnionData
 
-theorem closed_under_union (L₁ L₂ : Language T)
+theorem closed_under_union (L₁ L₂ : Language α)
   (h₁ : L₁.IsEDT0L)
   (h₂ : L₂.IsEDT0L) :
     (L₁ + L₂).IsEDT0L := by

@@ -13,63 +13,63 @@ import Mathlib.Logic.Relation
 # EDT0L Grammars
 
 An EDT0L grammar consists of the following data:
- * a finite alphabet of terminal letters `T`;
- * a finite alphabet of nonterminal letters `N`;
+ * a finite alphabet of terminal letters `α`;
+ * a finite alphabet of nonterminal letters `V`;
  * an initial nonterminal letter; and
- * a finite number of maps of the form `N → List (Symbol T N)` which we refer to as tables.
-Notice that `Symbol T N` is a type, provided by Mathlib, which corresponds to a disjoint union
-of the types `T` and `N`.
+ * a finite number of maps of the form `N → List (Symbol α V)` which we refer to as tables.
+Notice that `Symbol α V` is a type, provided by Mathlib, which corresponds to a disjoint union
+of the types `α` and `V`.
 
-To simplify proofs in this project, we index the tables of the grammar using a finite type `H`.
+To simplify proofs in this project, we index the tables of the grammar using a finite type `T`.
 
 ## Applying tables
 
-Suppose we are given some word `w : List (Symbol T N)`, then we may apply a table of the form
-`τ : N → List (Symbol T N)` by replacing each nonterminal in `w` with the corresponding word
+Suppose we are given some word `w : List (Symbol α V)`, then we may apply a table of the form
+`τ : V → List (Symbol α V)` by replacing each nonterminal in `w` with the corresponding word
 given by `τ`, and leaving all the terminal letters along.
 
-Let `E` be an EDT0L grammar. Then, a word `w : List T` is then accepted by the grammar if the word
+Let `E` be an EDT0L grammar. Then, a word `w : List α` is then accepted by the grammar if the word
 `w.map Symbol.terminal` can be reached from the initial word `[Symbol.nonterminal E.intial]`
 by applying a finite sequence of tables. The set of all such words is known as an EDT0L language.
 -/
 
-/-- EDT0L grammar with terminals `T`, nonterminals `N`, and tables `H`. -/
+/-- EDT0L grammar with terminals `α`, nonterminals `V`, and tables `T`. -/
 @[ext]
-structure EDT0LGrammar (T N H : Type*) [Fintype N] [Fintype H] where
+structure EDT0LGrammar (α V T : Type*) [Fintype V] [Fintype T] where
   /-- Initial nonterminal of the grammar -/
-  initial : N
-  /-- The finite set of tables, as indexed by `H`. -/
-  tables : H → N → List (Symbol T N) 
+  initial : V
+  /-- The finite set of tables, as indexed by `T`. -/
+  tables : T → V → List (Symbol α V)
 
 namespace EDT0LGrammar
-variable {T N H : Type*} [Fintype H] [Fintype N]
-variable (E : EDT0LGrammar T N H)
+variable {α V T : Type*} [Fintype V] [Fintype T]
+variable (E : EDT0LGrammar α V T)
+include E
 
 /-- Rewrites a symbol with respect to a given table. -/
-def RewriteSymbol (τ : H) : Symbol T N → List (Symbol T N)
-  | .terminal t => [ .terminal t ]
-  | .nonterminal n => E.tables τ n
+def rewriteSymbol (t : T) : Symbol α V → List (Symbol α V)
+  | .terminal a => [ .terminal a ]
+  | .nonterminal v => E.tables t v
 
 /-- Applies a given table to the given word. -/
-def RewriteWord (τ : H) (w : List (Symbol T N)) : List (Symbol T N) :=
-  w.flatMap (E.RewriteSymbol τ)
+def rewriteWord (t : T) (w : List (Symbol α V)) : List (Symbol α V) :=
+  w.flatMap (E.rewriteSymbol t)
 
 /-- A relation which holds if there exists a table which rewrites the word
 `source` to the word `target`. -/
-def Rewrites (source target : List (Symbol T N)) : Prop :=
-  ∃ τ : H, E.RewriteWord τ source = target
+def rewrites (source target : List (Symbol α V)) : Prop :=
+  ∃ t : T, E.rewriteWord t source = target
 
 /-- The reflexive transitive closure of `EDT0LGrammar.Rewrites`. -/
-def Derives : List (Symbol T N) → List (Symbol T N) → Prop :=
-  Relation.ReflTransGen E.Rewrites
+def derives : List (Symbol α V) → List (Symbol α V) → Prop :=
+  Relation.ReflTransGen E.rewrites
 
 /-- The given word can be derived from the inital word. -/
-def Generates (w : List (Symbol T N)) : Prop :=
-  E.Derives [Symbol.nonterminal E.initial] w
+def generates (w : List (Symbol α V)) : Prop :=
+  E.derives [Symbol.nonterminal E.initial] w
 
 /-- The language produced by the EDT0L grammar -/
-def language : Language T :=
-  { w : List T | E.Generates (w.map Symbol.terminal) }
+def language : Language α := { w : List α | E.generates (w.map Symbol.terminal) }
 
 end EDT0LGrammar
 
@@ -80,81 +80,75 @@ where the set of nonterminals and terminals are of the form `Fin n` and `Fin m`,
 for some `n m : ℕ`. Our main goal in this file is to show that we can assume without loss of
 generality that any given EDT0L grammar is of this form. We prove this fact in the theorem
 `edt0l_grammars_generate_edt0l_languages`, at the end of this file. -/
-def Language.IsEDT0L {T : Type*} (L : Language T) : Prop :=
-  ∃ n m : ℕ, ∃ E : EDT0LGrammar T (Fin n) (Fin m), E.language = L
+def Language.IsEDT0L {α : Type*} (L : Language α) : Prop :=
+  ∃ n m : ℕ, ∃ E : EDT0LGrammar α (Fin n) (Fin m), E.language = L
 
 namespace EDT0LGrammar
-variable {T N H : Type*} [Fintype H] [Fintype N]
+variable {α V T : Type*} [Fintype V] [Fintype T]
 
 -- now let's prove some very basic lemmas for `RewriteSymbol`
 
-namespace RewriteSymbol
-variable (E : EDT0LGrammar T N H) (τ : H)
+section RewriteSymbol
+variable (E : EDT0LGrammar α V T) (t : T)
 
 @[simp]
-lemma terminal (a : T) :
-    E.RewriteSymbol τ (.terminal a) = [.terminal a] := by
-  unfold RewriteSymbol
-  simp only
+lemma rewriteSymbol_terminal (a : α) : E.rewriteSymbol t (.terminal a) = [.terminal a] := rfl
 
 @[simp]
-lemma nonterminal (n : N) :
-    E.RewriteSymbol τ (.nonterminal n) = E.tables τ n := by
-  unfold RewriteSymbol
-  simp only
+lemma rewriteSymbol_nonterminal (v : V) : E.rewriteSymbol t (.nonterminal v) = E.tables t v := rfl
 
 end RewriteSymbol
 
 -- let's now move on to words
 
-namespace RewriteWord
-variable (E : EDT0LGrammar T N H) (τ : H)
+section RewriteWord
+variable (E : EDT0LGrammar α V T) (t : T)
 
 @[simp]
-lemma nil : E.RewriteWord τ [] = [] := rfl
+lemma rewriteWord_nil : E.rewriteWord t [] = [] := rfl
 
 @[simp]
-lemma cons {a : Symbol T N} {as : List (Symbol T N)} :
-    E.RewriteWord τ (a::as) = (E.RewriteSymbol τ a) ++ (E.RewriteWord τ as) := rfl
+lemma rewriteWord_cons {x : Symbol α V} {xs : List (Symbol α V)} :
+    E.rewriteWord t (x::xs) = (E.rewriteSymbol t x) ++ (E.rewriteWord t xs) := rfl
 
 @[simp]
-lemma append {a b : List (Symbol T N)} :
-    E.RewriteWord τ (a ++ b) = (E.RewriteWord τ a) ++ (E.RewriteWord τ b) := List.flatMap_append
+lemma rewriteWord_append {w₁ w₂ : List (Symbol α V)} :
+    E.rewriteWord t (w₁ ++ w₂) = (E.rewriteWord t w₁) ++ (E.rewriteWord t w₂) := List.flatMap_append
 
 @[simp]
-lemma single {a : Symbol T N} :
-    E.RewriteWord τ [a] = E.RewriteSymbol τ a := by
-  simp only [cons, nil, List.append_nil]
+lemma rewriteWord_single {x : Symbol α V} :
+    E.rewriteWord t [x] = E.rewriteSymbol t x := by
+  simp only [rewriteWord_cons, rewriteWord_nil, List.append_nil]
 
 @[simp]
-lemma terminal_word {w : List T} :
-    E.RewriteWord τ (w.map .terminal) = (w.map .terminal) := by
+lemma rewriteWord_terminals {w : List α} :
+    E.rewriteWord t (w.map .terminal) = (w.map .terminal) := by
   induction w with
-  | nil => simp only [List.map_nil, nil]
+  | nil => simp only [List.map_nil, rewriteWord_nil]
   | cons a as ih =>
-    simp only [List.map_cons]
-    simp only [cons, RewriteSymbol.terminal]
-    simp only [List.cons_append, List.nil_append]
+    simp only [List.map_cons, rewriteWord_cons, rewriteSymbol_terminal, List.cons_append,
+      List.nil_append, List.cons.injEq, true_and]
     rw [ih]
 
 end RewriteWord
 
 -- rewrites definition
 
-namespace Rewrites
-variable (E : EDT0LGrammar T N H) (τ : H)
+section Rewrites
+variable (E : EDT0LGrammar α V T) (t : T)
 
-lemma nil {w : List (Symbol T N)} : E.Rewrites [] w → w = [] := by
-  intro ⟨τ,h⟩
-  simp only [RewriteWord.nil, List.nil_eq] at h
-  exact h
+lemma rewrites_nil {w : List (Symbol α V)}
+  (h : E.rewrites [] w) :
+    w = [] := by
+  obtain ⟨τ, rfl⟩ := h
+  simp only [rewriteWord_nil]
 
-lemma terminal_word {w : List T} {w' : List (Symbol T N)} (h : E.Rewrites (w.map .terminal) w') :
+lemma rewrites_terminals {w : List α} {w' : List (Symbol α V)}
+  (h : E.rewrites (w.map .terminal) w') :
     w' = (w.map .terminal) := by
   replace ⟨τ,h⟩ := h
-  simp only [RewriteWord.terminal_word] at h
-  subst h
-  rfl
+  simp only [rewriteWord_terminals] at h
+  rw [← h]
 
 end Rewrites
 
@@ -162,84 +156,85 @@ end Rewrites
 -- and the corresponding type class instanciations. These type classes are needed if
 -- you want to use the `calc` tactic.
 
-namespace Derives
+section Derives
 section lemmas_for_derives
-variable {a b c : List (Symbol T N)}
-variable {E : EDT0LGrammar T N H}
+variable {x y z : List (Symbol α V)}
+variable {E : EDT0LGrammar α V T}
 
-lemma trans (h₁ : E.Derives a b) (h₂ : E.Derives b c) :
-    E.Derives a c := Relation.ReflTransGen.trans h₁ h₂
+lemma derives_trans (h₁ : E.derives x y) (h₂ : E.derives y z) : E.derives x z :=
+  Relation.ReflTransGen.trans h₁ h₂
 
-lemma single (h : E.Rewrites a b) :
-    E.Derives a b := Relation.ReflTransGen.single h
+lemma derives_single (h : E.rewrites x y) : E.derives x y :=
+  Relation.ReflTransGen.single h
 
-lemma head (h₁ : E.Rewrites a b) (h₂ : E.Derives b c) :
-    E.Derives a c := Relation.ReflTransGen.head h₁ h₂
+lemma derives_head (h₁ : E.rewrites x y) (h₂ : E.derives y z) : E.derives x z :=
+  Relation.ReflTransGen.head h₁ h₂
 
-lemma tail (h₁ : E.Derives a b) (h₂ : E.Rewrites b c) :
-    E.Derives a c := Relation.ReflTransGen.tail h₁ h₂
+lemma derives_tail (h₁ : E.derives x y) (h₂ : E.rewrites y z) : E.derives x z :=
+  Relation.ReflTransGen.tail h₁ h₂
 
-lemma refl : E.Derives a a := Relation.ReflTransGen.refl
+lemma derives_refl : E.derives x x :=
+  Relation.ReflTransGen.refl
 
 end lemmas_for_derives
 
 section class_instances_for_derives
-variable (E : EDT0LGrammar T N H)
+variable (E : EDT0LGrammar α V T)
 
-instance : Trans E.Derives E.Derives E.Derives where
-  trans h₁ h₂ := Derives.trans h₁ h₂
+instance : Trans E.derives E.derives E.derives where
+  trans h₁ h₂ := derives_trans h₁ h₂
 
-instance : Trans E.Derives E.Rewrites E.Derives where
-  trans h₁ h₂ := Derives.tail h₁ h₂
+instance : Trans E.derives E.rewrites E.derives where
+  trans h₁ h₂ := derives_tail h₁ h₂
 
-instance : Trans E.Rewrites E.Derives E.Derives where
-  trans h₁ h₂ := Derives.head h₁ h₂
+instance : Trans E.rewrites E.derives E.derives where
+  trans h₁ h₂ := derives_head h₁ h₂
 
-instance : Trans E.Rewrites E.Rewrites E.Derives where
-  trans h₁ h₂ := Derives.tail (Derives.single h₁) h₂
+instance : Trans E.rewrites E.rewrites E.derives where
+  trans h₁ h₂ := derives_tail (derives_single h₁) h₂
 
-instance : IsTrans (List (Symbol T N)) E.Derives where
-  trans _ := fun _ _ hxy hyz ↦ Derives.trans hxy hyz
+instance : IsTrans (List (Symbol α V)) E.derives where
+  trans _ := fun _ _ hxy hyz ↦ derives_trans hxy hyz
 
-instance : IsRefl (List (Symbol T N)) E.Derives where
-  refl _ := Derives.refl
+instance : IsRefl (List (Symbol α V)) E.derives where
+  refl _ := derives_refl
 
-instance : IsPreorder (List (Symbol T N)) E.Derives where
-  trans _ := fun _ _ hxy hyz ↦ Derives.trans hxy hyz
-  refl _ := Derives.refl
+instance : IsPreorder (List (Symbol α V)) E.derives where
+  trans _ := fun _ _ hxy hyz ↦ derives_trans hxy hyz
+  refl _ := derives_refl
 
 end class_instances_for_derives
 end Derives
 
 -- some additional lemmas about derives
 
-namespace Derives
-variable (E : EDT0LGrammar T N H)
+section Derives
+variable (E : EDT0LGrammar α V T)
 
-lemma nil {w : List (Symbol T N)} : E.Derives [] w → w = [] := by
-  intro h
-  unfold Derives at h
+lemma derives_nil {w : List (Symbol α V)}
+  (h : E.derives [] w) :
+    w = [] := by
   induction h with
   | refl => rfl
   | tail h_a hab ha =>
     rename_i a b
     subst ha
-    exact Rewrites.nil E hab
+    exact rewrites_nil E hab
 
-lemma terminal_word {w : List T} {w' : List (Symbol T N)} (h : E.Rewrites (w.map .terminal) w') :
+lemma derives_terminals {w : List α} {w' : List (Symbol α V)}
+  (h : E.rewrites (w.map .terminal) w') :
     w' = (w.map .terminal) := by
   replace ⟨τ,h⟩ := h
-  simp only [RewriteWord.terminal_word] at h
-  subst h
-  rfl
+  simp only [rewriteWord_terminals] at h
+  rw [← h]
 
 end Derives
 
 -- generates
 
 section Generates
-variable (E : EDT0LGrammar T N H)
-lemma generates_initial : E.Generates [.nonterminal E.initial] := Relation.ReflTransGen.refl
+variable (E : EDT0LGrammar α V T) in
+lemma generates_initial : E.generates [.nonterminal E.initial] := Relation.ReflTransGen.refl
 end Generates
 
 end EDT0LGrammar
@@ -254,52 +249,119 @@ namespace EDT0LGrammar
 This structure holds the data needed to construct an EDT0L grammar which can be used in the
 proof of `edt0l_grammars_generate_edt0l_languages`. We provide this construction as its own
 structure as this construction is to be reused when defining EDT0L grammars with finite index -/
-structure EquivData {T N H N' H' : Type*} [Fintype N] [Fintype H] [Fintype N'] [Fintype H'] where
+structure EquivData {α V T V' T' : Type*} [Fintype V] [Fintype T] [Fintype V'] [Fintype T'] where
   /-- The grammar for which we want to find an equivalent grammar. -/
-  E : EDT0LGrammar T N H
+  E : EDT0LGrammar α V T
   /-- An equivalence relation between nonterminals. -/
-  equivN : N ≃ N'
+  equivV : V ≃ V'
   /-- An equivalence relation between tables. -/
-  equivH : H ≃ H'
+  equivT : T ≃ T'
 
 namespace EquivData
-variable {T N N H N' H' : Type*} [Fintype N] [Fintype H] [Fintype N'] [Fintype H'] 
-variable (𝓖 : @EquivData T N H N' H' _ _ _ _)
+variable {α V T V' T' : Type*} [Fintype V] [Fintype T] [Fintype V'] [Fintype T'] 
+variable (data : @EquivData α V T V' T' _ _ _ _)
+
+def equivTableSeq : List T ≃ List T' where
+  toFun := fun x ↦ x.map data.equivT
+  invFun := fun x ↦ x.map data.equivT.symm
+  left_inv := by
+    intro s
+    simp only [List.map_map, Equiv.symm_comp_self, List.map_id_fun, id_eq]
+  right_inv := by
+    intro s
+    simp only [List.map_map, Equiv.self_comp_symm, List.map_id_fun, id_eq]
+
+@[simp]
+lemma equivTableSeq_nil :
+    data.equivTableSeq [] = [] := by
+  unfold equivTableSeq
+  simp only [Equiv.coe_fn_mk, List.map_nil]
+
+@[simp]
+lemma equivTableSeq_cons (t ts) :
+    data.equivTableSeq (t::ts) = data.equivT t :: (data.equivTableSeq ts) := by
+  unfold equivTableSeq
+  simp only [Equiv.coe_fn_mk, List.map_cons]
+
+@[simp]
+lemma equivTableSeq_append (a b) :
+    data.equivTableSeq (a ++ b) = data.equivTableSeq a ++ data.equivTableSeq b := by
+  induction a with
+  | nil =>
+    simp only [List.nil_append, equivTableSeq_nil]
+  | cons a as ih =>
+    simp only [List.cons_append, equivTableSeq_cons, ih]
+
+@[simp]
+lemma equivTableSeq_grammar_nil :
+    data.equivTableSeq.symm [] = [] := by
+  unfold equivTableSeq
+  simp only [Equiv.coe_fn_symm_mk, List.map_nil]
+
+@[simp]
+lemma equivTableSeq_grammar_cons (t ts) :
+    data.equivTableSeq.symm (t::ts) = data.equivT.symm t :: (data.equivTableSeq.symm ts) := by
+  unfold equivTableSeq
+  simp only [Equiv.coe_fn_symm_mk, List.map_cons]
+
+@[simp]
+lemma equivTableSeq_grammar_append (a b) :
+    data.equivTableSeq.symm (a ++ b) = data.equivTableSeq.symm a ++ data.equivTableSeq.symm b := by
+  induction a with
+  | nil =>
+    simp only [List.nil_append, equivTableSeq_grammar_nil]
+  | cons a as ih =>
+    simp only [List.cons_append, equivTableSeq_grammar_cons, ih]
+
+@[simp]
+lemma equivTableSeq_length (a) :
+    (data.equivTableSeq a).length = a.length := by
+  induction a with
+  | nil =>
+    simp only [equivTableSeq_nil, List.length_nil]
+  | cons a as ih =>
+    simp only [equivTableSeq_cons, List.length_cons, ih]
+
+@[simp]
+lemma equivTableSeq_length' (a) :
+    (data.equivTableSeq.symm a).length = a.length := by
+  induction a with
+  | nil =>
+    simp only [equivTableSeq_grammar_nil, List.length_nil]
+  | cons a as ih =>
+    simp only [equivTableSeq_grammar_cons, List.length_cons, ih]
 
 /-- An equivalence relation between symbols of terminals and nonterminals.
 
 This equivalence relation is constructed from the equivalence relation between
 nonterminals, as stored in the `EquivData` structure. -/
-def equiv_symbol : (Symbol T N) ≃ (Symbol T N') where
-  toFun := fun s ↦ match s with
-    | .terminal t => .terminal t
-    | .nonterminal n => .nonterminal (𝓖.equivN n)
-  invFun := fun s ↦ match s with
-    | .terminal t => .terminal t
-    | .nonterminal n => .nonterminal (𝓖.equivN.symm n)
+def equivSymbol : (Symbol α V) ≃ (Symbol α V') where
+  toFun := fun x ↦ match x with
+    | .terminal a => .terminal a
+    | .nonterminal v => .nonterminal (data.equivV v)
+  invFun := fun x ↦ match x with
+    | .terminal a => .terminal a
+    | .nonterminal v => .nonterminal (data.equivV.symm v)
   left_inv := by
-    unfold Function.LeftInverse
     intro x
     cases x
     · rfl
     · simp_all only [Equiv.symm_apply_apply]
   right_inv := by
-    unfold Function.RightInverse
-    unfold Function.LeftInverse
     intro x
     cases x
     · rfl
     · simp_all only [Equiv.apply_symm_apply]
 
+
 /-- An equivalence relation between words.
 
 This equivalence relation is constructed from the equivalence relation between
 nonterminals, as stored in the `EquivData` structure. -/
-def equiv_word : List (Symbol T N) ≃ List (Symbol T N') where
-  toFun := List.map 𝓖.equiv_symbol
-  invFun := List.map 𝓖.equiv_symbol.symm
+def equivWord : List (Symbol α V) ≃ List (Symbol α V') where
+  toFun := List.map data.equivSymbol
+  invFun := List.map data.equivSymbol.symm
   left_inv := by
-    unfold Function.LeftInverse
     intro x
     simp_all only [
       List.map_map,
@@ -307,8 +369,6 @@ def equiv_word : List (Symbol T N) ≃ List (Symbol T N') where
       List.map_id_fun,
       id_eq]
   right_inv := by
-    unfold Function.RightInverse
-    unfold Function.LeftInverse
     intro x
     simp_all only [
       List.map_map,
@@ -317,113 +377,104 @@ def equiv_word : List (Symbol T N) ≃ List (Symbol T N') where
       id_eq]
 
 /-- Constructs an EDT0L grammar equivalent to the one store in `EquivData`. -/
-def grammar : EDT0LGrammar T N' H' where
-  initial := 𝓖.equivN 𝓖.E.initial
-  tables := fun h n ↦ 𝓖.equiv_word (𝓖.E.tables (𝓖.equivH.symm h) (𝓖.equivN.symm n))
+def grammar : EDT0LGrammar α V' T' where
+  initial := data.equivV data.E.initial
+  tables := fun t v ↦ data.equivWord (data.E.tables (data.equivT.symm t) (data.equivV.symm v))
 
-lemma equiv_symbol_terminal (a : T) : 𝓖.equiv_symbol (.terminal a) = .terminal a := by
-  unfold EquivData.equiv_symbol
-  simp only [Equiv.coe_fn_mk]
+@[simp]
+lemma equivSymbol_terminal {a : α} : data.equivSymbol (.terminal a) = .terminal a := rfl
 
-lemma equiv_symbol_nonterminal (n : N) :
-    𝓖.equiv_symbol (.nonterminal n) = .nonterminal (𝓖.equivN n) := by
-  unfold EquivData.equiv_symbol
-  simp only [Equiv.coe_fn_mk]
+@[simp]
+lemma equiv_symbol_nonterminal {v : V} :
+    data.equivSymbol (.nonterminal v) = .nonterminal (data.equivV v) := rfl
 
-@[simp high]
-lemma equiv_word_nil : 𝓖.equiv_word [] = [] := rfl
+@[simp]
+lemma equiv_symbol_nonterminal' {v} :
+    data.equivSymbol.symm (.nonterminal v) = .nonterminal (data.equivV.symm v) := rfl
 
-@[simp high]
-lemma equiv_word_singleton (a : Symbol T N) : 𝓖.equiv_word [a] = [𝓖.equiv_symbol a] := by
-  unfold equiv_word
-  simp only [Equiv.coe_fn_mk, List.map_cons, List.map_nil]
+@[simp]
+lemma equivV_initial :
+    data.equivV data.E.initial = data.grammar.initial := by
+  unfold EquivData.grammar
+  simp only
 
-@[simp high]
-lemma equiv_word_cons {a : Symbol T N} {as : List (Symbol T N)} :
-    𝓖.equiv_word (a::as) = (𝓖.equiv_symbol a) :: (𝓖.equiv_word as) := by
-  rw [equiv_word]
-  simp only [Equiv.coe_fn_mk, List.map_cons]
+@[simp]
+lemma equivV_grammar_initial :
+    data.equivV.symm data.grammar.initial = data.E.initial := by
+  unfold EquivData.grammar
+  simp only [Equiv.symm_apply_apply]
 
-@[simp high]
-lemma equiv_word_append {a b : List (Symbol T N)} :
-    𝓖.equiv_word (a ++ b) = (𝓖.equiv_word a) ++ (𝓖.equiv_word b) := by
-  induction a with
-  | nil => simp only [List.nil_append, equiv_word_nil]
+@[simp]
+lemma equivWord_nil : data.equivWord [] = [] := rfl
+
+@[simp]
+lemma equivWord_singleton {x : Symbol α V} : data.equivWord [x] = [data.equivSymbol x] := rfl
+
+@[simp]
+lemma equivWord_cons {x : Symbol α V} {xs : List (Symbol α V)} :
+    data.equivWord (x::xs) = (data.equivSymbol x) :: (data.equivWord xs) := rfl
+
+@[simp]
+lemma equivWord_append {x y : List (Symbol α V)} :
+    data.equivWord (x ++ y) = (data.equivWord x) ++ (data.equivWord y) := by
+  induction x with
+  | nil => simp only [List.nil_append, equivWord_nil]
   | cons a as ih =>
-    simp only [List.cons_append]
-    simp only [equiv_word_cons]
-    simp only [List.cons_append]
+    simp only [List.cons_append, equivWord_cons, List.cons.injEq, true_and]
     rw [← ih]
 
-@[simp high]
-lemma equiv_word_terminal (w : List T) :
-    𝓖.equiv_word (w.map .terminal) = w.map .terminal := by
+@[simp]
+lemma equivWord_terminals {w : List α} :
+    data.equivWord (w.map .terminal) = w.map .terminal := by
   induction w with
   | nil =>
-    unfold equiv_word
+    unfold equivWord
     simp only [List.map_nil, Equiv.coe_fn_mk]
   | cons a as ih =>
-    simp only [List.map_cons, equiv_word_cons]
+    simp only [List.map_cons, equivWord_cons, equivSymbol_terminal, List.cons.injEq, true_and]
     rw [← ih]
-    simp only [List.cons.injEq, and_true]
-    rfl
 
-def symm := EquivData.mk 𝓖.grammar 𝓖.equivN.symm 𝓖.equivH.symm
+def symm := EquivData.mk data.grammar data.equivV.symm data.equivT.symm
 
-@[simp]
-lemma symm_equiv_symbol : 𝓖.symm.equiv_symbol = 𝓖.equiv_symbol.symm := by
-  unfold symm
-  unfold equiv_symbol
-  rfl
+lemma symm_equivSymbol : data.symm.equivSymbol = data.equivSymbol.symm := rfl
+
+lemma symm_equivWord : data.symm.equivWord = data.equivWord.symm := rfl
 
 @[simp]
-lemma symm_equiv_word : 𝓖.symm.equiv_word = 𝓖.equiv_word.symm := by
-  unfold symm
-  unfold equiv_word
-  rfl
+lemma equivWord_symm_nil : data.equivWord.symm [] = [] := rfl
 
-@[simp high]
-lemma equiv_word_nil' : 𝓖.equiv_word.symm [] = [] := rfl
+@[simp]
+lemma equivWord_symm_single {x : Symbol α V'} :
+    data.equivWord.symm [x] = [data.equivSymbol.symm x] := rfl
 
-@[simp high]
-lemma equiv_word_singleton' (a : Symbol T N') :
-    𝓖.equiv_word.symm [a] = [𝓖.equiv_symbol.symm a] := by
-  simp only [← symm_equiv_word]
-  simp only [equiv_word_singleton]
-  rfl
+@[simp]
+lemma equivWord_symm_cons {x : Symbol α V'} {xs : List (Symbol α V')} :
+    data.equivWord.symm (x::xs) = (data.equivSymbol.symm x) :: (data.equivWord.symm xs) := rfl
 
-@[simp high]
-lemma equiv_word_cons' {a : Symbol T N'} {as : List (Symbol T N')} :
-    𝓖.equiv_word.symm (a::as) = (𝓖.equiv_symbol.symm a) :: (𝓖.equiv_word.symm as) := by
-  rw [equiv_word]
-  simp only [Equiv.coe_fn_symm_mk, List.map_cons]
-
-@[simp high]
-lemma equiv_word_append' {a b : List (Symbol T N')} :
-    𝓖.equiv_word.symm (a ++ b) = (𝓖.equiv_word.symm a) ++ (𝓖.equiv_word.symm b) := by
-  induction a with
-  | nil => simp only [List.nil_append, equiv_word_nil']
+@[simp]
+lemma equivWord_symm_append {x y : List (Symbol α V')} :
+    data.equivWord.symm (x ++ y) = (data.equivWord.symm x) ++ (data.equivWord.symm y) := by
+  induction x with
+  | nil => simp only [List.nil_append, equivWord_symm_nil]
   | cons a as ih =>
-    simp only [List.cons_append]
-    simp only [equiv_word_cons']
-    simp only [List.cons_append]
+    simp only [List.cons_append, equivWord_symm_cons, List.cons.injEq, true_and]
     rw [← ih]
 
-@[simp high]
-lemma equiv_word_terminal' (w : List T) :
-    𝓖.equiv_word.symm (w.map .terminal) = w.map .terminal := by
+@[simp]
+lemma equivWord_symm_terminals {w : List α} :
+    data.equivWord.symm (w.map .terminal) = w.map .terminal := by
   induction w with
   | nil =>
-    unfold equiv_word
+    unfold equivWord
     simp only [List.map_nil, Equiv.coe_fn_symm_mk]
   | cons a as ih =>
-    simp only [List.map_cons, equiv_word_cons']
+    simp only [List.map_cons, equivWord_symm_cons, List.cons.injEq]
     rw [← ih]
-    simp only [List.cons.injEq, and_true]
+    simp only [and_true]
     rfl
 
 @[simp]
-lemma symm_grammar : 𝓖.symm.grammar = 𝓖.E := by
+lemma symm_grammar : data.symm.grammar = data.E := by
   ext1
   · unfold EquivData.symm
     unfold EquivData.grammar
@@ -432,25 +483,28 @@ lemma symm_grammar : 𝓖.symm.grammar = 𝓖.E := by
     unfold EquivData.grammar
     simp only [Equiv.symm_symm, Equiv.symm_apply_apply]
     funext h n
-    change 𝓖.symm.equiv_word _ = _
-    simp only [symm_equiv_word, Equiv.symm_apply_apply]
+    change data.symm.equivWord _ = _
+    simp only [symm_equivWord, Equiv.symm_apply_apply]
 
 @[simp]
-lemma grammar_rewrite_symbol_iff (τ : H') (s : Symbol T N') :
-    𝓖.grammar.RewriteSymbol τ s
-    = 𝓖.equiv_word (
-        𝓖.E.RewriteSymbol
-          (𝓖.equivH.symm τ)
-          (𝓖.equiv_symbol.symm s)) := by
-  --
-  unfold EDT0LGrammar.RewriteSymbol
+lemma grammar_rewriteSymbol_iff {t : T'} {x : Symbol α V'} :
+    data.grammar.rewriteSymbol t x
+    = data.equivWord (
+        data.E.rewriteSymbol
+          (data.equivT.symm t)
+          (data.equivSymbol.symm x)) := by
+  unfold EDT0LGrammar.rewriteSymbol
   split <;> rfl
 
-lemma grammar_rewrite_word_iff (τ : H') (w : List (Symbol T N')) :
-    𝓖.grammar.RewriteWord τ w
-    = 𝓖.equiv_word (𝓖.E.RewriteWord (𝓖.equivH.symm τ) (𝓖.equiv_word.symm w)) := by
+@[simp]
+lemma grammar_rewriteWord_iff {t : T'} {w : List (Symbol α V')} :
+    data.grammar.rewriteWord t w
+    = data.equivWord (
+        data.E.rewriteWord
+          (data.equivT.symm t)
+          (data.equivWord.symm w)) := by
   --
-  unfold EDT0LGrammar.RewriteWord
+  unfold EDT0LGrammar.rewriteWord
   induction w with
   | nil =>
     simp only [List.flatMap_nil, List.nil_eq]
@@ -458,40 +512,42 @@ lemma grammar_rewrite_word_iff (τ : H') (w : List (Symbol T N')) :
   | cons a as ih =>
     conv =>
       right ; arg 2 ; arg 2
-      simp only [← symm_equiv_word, equiv_word_cons, symm_equiv_word]
+      simp only [← symm_equivWord, equivWord_cons, symm_equivWord]
     simp only [List.flatMap_cons]
     conv =>
       right
-      simp only [← symm_equiv_word, equiv_word_append, symm_equiv_word]
+      simp only [← symm_equivWord, equivWord_append, symm_equivWord]
     rw [ih]
-    simp only [grammar_rewrite_symbol_iff, equiv_word_cons', List.flatMap_cons, equiv_word_append]
+    simp only [grammar_rewriteSymbol_iff, equivWord_symm_cons, List.flatMap_cons, equivWord_append]
 
-lemma grammar_rewrites_iff (u v : List (Symbol T N')) :
-    𝓖.grammar.Rewrites u v ↔ 𝓖.E.Rewrites (𝓖.equiv_word.symm u) (𝓖.equiv_word.symm v) := by
+@[simp]
+lemma grammar_rewrites_iff (x y : List (Symbol α V')) :
+    data.grammar.rewrites x y
+      ↔ data.E.rewrites (data.equivWord.symm x) (data.equivWord.symm y) := by
   --
   constructor
-  · unfold EDT0LGrammar.Rewrites
+  · unfold EDT0LGrammar.rewrites
     intro h
-    have ⟨τ, h'⟩ := h
-    use (𝓖.equivH.symm τ)
-    rw [grammar_rewrite_word_iff] at h'
+    have ⟨t, h'⟩ := h
+    use (data.equivT.symm t)
+    rw [grammar_rewriteWord_iff] at h'
     rw [← h']
     simp only [Equiv.symm_apply_apply]
-  · unfold EDT0LGrammar.Rewrites
+  · unfold EDT0LGrammar.rewrites
     intro h
-    have ⟨τ, h'⟩ := h
-    use (𝓖.equivH τ)
-    rw [grammar_rewrite_word_iff]
+    have ⟨t, h'⟩ := h
+    use (data.equivT t)
+    rw [grammar_rewriteWord_iff]
     conv =>
       arg 1 ; arg 2 ; arg 2
       simp only [Equiv.invFun_as_coe, Equiv.toFun_as_coe, Equiv.symm_apply_apply]
     rw [h']
     simp only [Equiv.apply_symm_apply]
 
-lemma grammar_derives_iff_mp (u v : List (Symbol T N')) :
-    𝓖.grammar.Derives u v → 𝓖.E.Derives (𝓖.equiv_word.symm u) (𝓖.equiv_word.symm v) := by
+lemma grammar_derives_iff_mp (x y : List (Symbol α V')) :
+    data.grammar.derives x y → data.E.derives (data.equivWord.symm x) (data.equivWord.symm y) := by
   --
-  unfold EDT0LGrammar.Derives
+  unfold EDT0LGrammar.derives
   intro h
   induction h with
   | refl =>
@@ -500,80 +556,78 @@ lemma grammar_derives_iff_mp (u v : List (Symbol T N')) :
     rfl
   | tail ih₁ ih₂ ih₃ =>
     rename_i a b
-    replace ih₂ := (grammar_rewrites_iff 𝓖 a b).mp ih₂
+    replace ih₂ := (grammar_rewrites_iff data a b).mp ih₂
     exact Relation.ReflTransGen.tail ih₃ ih₂
 
-lemma grammar_derives_iff_mpr (u v : List (Symbol T N')) :
-    𝓖.E.Derives (𝓖.equiv_word.symm u) (𝓖.equiv_word.symm v) → 𝓖.grammar.Derives u v := by
+lemma grammar_derives_iff_mpr (x y : List (Symbol α V')) :
+    data.E.derives (data.equivWord.symm x) (data.equivWord.symm y) → data.grammar.derives x y := by
   --
   simp only [← symm_grammar]
   intro h
-  have hh := grammar_derives_iff_mp
-            (EquivData.mk (𝓖.grammar) (𝓖.equivN.symm) (𝓖.equivH.symm))
-            (𝓖.equiv_word.symm u) (𝓖.equiv_word.symm v)
-            h
+  have hh :=
+    grammar_derives_iff_mp
+      (EquivData.mk (data.grammar) (data.equivV.symm) (data.equivT.symm))
+      (data.equivWord.symm x) (data.equivWord.symm y)
+      h
   conv at hh =>
     arg 2
-    change 𝓖.equiv_word _
+    change data.equivWord _
     simp only [Equiv.invFun_as_coe, Equiv.toFun_as_coe, Equiv.apply_symm_apply]
   conv at hh =>
     arg 3
-    change 𝓖.equiv_word _
+    change data.equivWord _
     simp only [Equiv.invFun_as_coe, Equiv.toFun_as_coe, Equiv.apply_symm_apply]
   exact hh
 
-lemma grammar_derives_iff (u v : List (Symbol T N')) :
-    𝓖.grammar.Derives u v ↔ 𝓖.E.Derives (𝓖.equiv_word.symm u) (𝓖.equiv_word.symm v) := by
+lemma grammar_derives_iff {x y : List (Symbol α V')} :
+    data.grammar.derives x y ↔ data.E.derives (data.equivWord.symm x) (data.equivWord.symm y) := by
   constructor
   · exact grammar_derives_iff_mp _ _ _
   · exact grammar_derives_iff_mpr _ _ _
 
-lemma grammar_derives_iff' (u v : List (Symbol T N)) :
-    𝓖.E.Derives u v ↔ 𝓖.grammar.Derives (𝓖.equiv_word u) (𝓖.equiv_word v) := by
+lemma grammar_derives_iff' {x y : List (Symbol α V)} :
+    data.E.derives x y ↔ data.grammar.derives (data.equivWord x) (data.equivWord y) := by
   simp only [← symm_grammar]
-  exact grammar_derives_iff _ _ _
+  exact grammar_derives_iff _
 
-lemma grammar_generates_iff (w : List (Symbol T N)) :
-    𝓖.E.Generates w ↔ 𝓖.grammar.Generates (𝓖.equiv_word w) := grammar_derives_iff' _ _ _
+lemma grammar_generates_iff {w : List (Symbol α V)} :
+    data.E.generates w ↔ data.grammar.generates (data.equivWord w) := grammar_derives_iff' _
 
-lemma grammar_language_iff (w : List T) :
-    𝓖.E.Generates (List.map .terminal w)
-    ↔ 𝓖.grammar.Generates (List.map .terminal w) := by
+lemma grammar_language_iff {w : List α} :
+    data.E.generates (List.map .terminal w) ↔ data.grammar.generates (List.map .terminal w) := by
   conv =>
     rhs; arg 2
-    rw [← equiv_word_terminal 𝓖]
-  exact grammar_generates_iff _ _
+    rw [← equivWord_terminals data]
+  exact grammar_generates_iff _
 
-lemma equiv_has_same_language :
-    𝓖.E.language = 𝓖.grammar.language := by
-  --
+@[simp]
+lemma equiv_eq_language : data.E.language = data.grammar.language := by
   unfold EDT0LGrammar.language
   simp only [grammar_language_iff]
 
 end EquivData
 
-lemma fin_nonterminals_and_tables {T N H : Type*} [Fintype N] [Fintype H]
-  (E : EDT0LGrammar T N H) :
-    ∃ E' : EDT0LGrammar T (Fin (Fintype.card N)) (Fin (Fintype.card H)),
-    E'.language = E.language := by 
+lemma fin_nonterminals_and_tables {α V T : Type*} [finV : Fintype V] [finT : Fintype T]
+  (E : EDT0LGrammar α V T) :
+    ∃ E' : EDT0LGrammar α (Fin (Fintype.card V)) (Fin (Fintype.card T)),
+      E'.language = E.language := by 
   --
-  rename_i finN finH
-  have isoN := finN.equivFin
-  have isoH := finH.equivFin
-  let E' := EquivData.mk E isoN isoH
+  have isoV := finV.equivFin
+  have isoT := finT.equivFin
+  let E' := EquivData.mk E isoV isoT
   use E'.grammar
   conv =>
     rhs
     change E'.E.language
   apply Eq.symm
-  exact EquivData.equiv_has_same_language _
+  exact EquivData.equiv_eq_language _
 
-theorem edt0l_grammars_generate_edt0l_languages {T N H : Type*} [Fintype N] [Fintype H]
-  (E : EDT0LGrammar T N H) :
+theorem edt0l_grammars_generate_edt0l_languages {α V T : Type*} [Fintype V] [Fintype T]
+  (E : EDT0LGrammar α V T) :
     E.language.IsEDT0L := by
   --
   have ⟨E', h⟩ := fin_nonterminals_and_tables E
   unfold Language.IsEDT0L
-  use Fintype.card N, Fintype.card H, E'
+  use Fintype.card V, Fintype.card T, E'
 
 end EDT0LGrammar

@@ -5,14 +5,17 @@ Author: Alex Bishop
 -/
 import LSystems.EDT0L.Defs
 
-theorem trivial_EDT0L_grammars {T N H : Type*} [Fintype H] [Fintype N] [IsEmpty H]
-  (E : EDT0LGrammar T N H) :
+namespace EDT0LGrammar
+
+@[simp]
+theorem no_tables_imp_eq_0 {α V T : Type*} [Fintype V] [Fintype T] [IsEmpty T]
+  (E : EDT0LGrammar α V T) :
     E.language = 0 := by
   unfold EDT0LGrammar.language
-  have hh (w : List T) : ¬ E.Generates (List.map .terminal w) := by
+  have hh (w : List α) : ¬ E.generates (List.map .terminal w) := by
     intro h
-    unfold EDT0LGrammar.Generates at h
-    unfold EDT0LGrammar.Derives at h
+    unfold EDT0LGrammar.generates at h
+    unfold EDT0LGrammar.derives at h
     rw [Relation.reflTransGen_iff_eq_or_transGen] at h
     cases h with
     | inl h =>
@@ -20,23 +23,21 @@ theorem trivial_EDT0L_grammars {T N H : Type*} [Fintype H] [Fintype N] [IsEmpty 
     | inr h =>
       cases h with
       | single h => 
-        unfold EDT0LGrammar.Rewrites at h
+        unfold EDT0LGrammar.rewrites at h
         simp_all only [IsEmpty.exists_iff]
       | tail _ h =>
-        unfold EDT0LGrammar.Rewrites at h
+        unfold EDT0LGrammar.rewrites at h
         simp_all only [IsEmpty.exists_iff]
   simp only [hh]
   simp only [Set.setOf_false]
   rfl
 
-theorem empty_language_is_EDT0L {α : Type*} : Language.IsEDT0L (0 : Language α) := by
+theorem language_0_is_EDT0L {α : Type*} : Language.IsEDT0L (0 : Language α) := by
   let E : EDT0LGrammar α (Fin 1) (Fin 0) := ⟨ 
     0,
     fun _ ↦ fun _ ↦ []
   ⟩
-  have h := trivial_EDT0L_grammars E
-  rw [Language.IsEDT0L]
-  use 1, 0, E
+  use 1, 0, E, E.no_tables_imp_eq_0
 
 theorem language_1_is_EDT0L {α : Type*} : Language.IsEDT0L (1 : Language α) := by
   let E : EDT0LGrammar α (Fin 1) (Fin 1) := ⟨ 
@@ -45,19 +46,19 @@ theorem language_1_is_EDT0L {α : Type*} : Language.IsEDT0L (1 : Language α) :=
   ⟩
   simp only [Language.IsEDT0L, EDT0LGrammar.language]
 
-  have h : E.Derives [.nonterminal E.initial] [] := by
-    unfold EDT0LGrammar.Derives
+  have h : E.derives [.nonterminal E.initial] [] := by
+    unfold EDT0LGrammar.derives
     apply Relation.ReflTransGen.tail (Relation.ReflTransGen.refl) _
     use 0
     subst E
-    simp only [Fin.isValue, EDT0LGrammar.RewriteWord.cons, EDT0LGrammar.RewriteSymbol.nonterminal,
-      EDT0LGrammar.RewriteWord.nil, List.append_nil]
+    simp only [Fin.isValue, rewriteWord_cons, rewriteSymbol_nonterminal, rewriteWord_nil,
+      List.append_nil]
 
   have h : ∀ w :
-      List (Symbol α (Fin 1)), E.Generates w → w = [Symbol.nonterminal 0] ∨ w = [] := by
+      List (Symbol α (Fin 1)), E.generates w → w = [Symbol.nonterminal 0] ∨ w = [] := by
     intro w
     intro h₁
-    rw [EDT0LGrammar.Generates, EDT0LGrammar.Derives] at h₁
+    rw [EDT0LGrammar.generates, EDT0LGrammar.derives] at h₁
 
     induction h₁ with
     | refl =>
@@ -69,7 +70,7 @@ theorem language_1_is_EDT0L {α : Type*} : Language.IsEDT0L (1 : Language α) :=
         | inl h₄ =>
             rw [h₄] at h₃
             clear h₄
-            rw [EDT0LGrammar.Rewrites] at h₃
+            rw [EDT0LGrammar.rewrites] at h₃
             have h₄ : ∀ τ : (Fin 1), τ = 0 := by
               --aesop?
               intro τ
@@ -89,7 +90,7 @@ theorem language_1_is_EDT0L {α : Type*} : Language.IsEDT0L (1 : Language α) :=
         | inr h₄ =>
             rw [h₄] at h₃
             clear h₄
-            rw [EDT0LGrammar.Rewrites] at h₃
+            rw [EDT0LGrammar.rewrites] at h₃
             have h₄ : ∀ τ : (Fin 1), τ = 0 := by
               --aesop?
               intro τ
@@ -98,13 +99,13 @@ theorem language_1_is_EDT0L {α : Type*} : Language.IsEDT0L (1 : Language α) :=
               subst h
               ext : 1
               simp_all only [Fin.isValue, Fin.val_eq_zero]
-            simp only [EDT0LGrammar.RewriteWord.nil, List.nil_eq, exists_const] at h₃
+            simp only [EDT0LGrammar.rewriteWord_nil, List.nil_eq, exists_const] at h₃
             rw [← h₃]
   -------------------
   use 1, 1, E
 
   have h₁ (w : List α) :
-      E.Generates (List.map Symbol.terminal w) ↔ w = [] := by
+      E.generates (List.map Symbol.terminal w) ↔ w = [] := by
     constructor
     case mp =>
       intro w₁
@@ -119,46 +120,92 @@ theorem language_1_is_EDT0L {α : Type*} : Language.IsEDT0L (1 : Language α) :=
     case mpr =>
       intro w₁
       rw [w₁]
-      rw [EDT0LGrammar.Generates,EDT0LGrammar.Derives]
+      rw [EDT0LGrammar.generates,EDT0LGrammar.derives]
       simp only [List.map_nil]
       rw [Relation.reflTransGen_iff_eq_or_transGen]
       right
       rw [Relation.transGen_iff]
       left
-      rw [EDT0LGrammar.Rewrites]
+      rw [EDT0LGrammar.rewrites]
       use 0
-      unfold EDT0LGrammar.RewriteWord
-      unfold EDT0LGrammar.RewriteSymbol
+      unfold EDT0LGrammar.rewriteWord
+      unfold EDT0LGrammar.rewriteSymbol
       subst w₁
       simp_all only [Fin.isValue, List.flatMap_cons, List.flatMap_nil, List.append_nil, E]
   exact Language.ext_iff.mpr h₁
   -------------------
 
--- lemma language_of_partitions : 
---     -- Here a partition is a list of the form
---     --    [x_1, x_2, ..., x_n]
---     -- where each x_i ≥ 1, and x_i ≤ x_{i+1} for each i
---     --
---     -- This let constructs such a list from a list of the form
---     --    [(x_1 - 1), (x_3 - x_2), (x_4 - x_3), ..., (x_n - x_{n-1})]
---     -- It should be clear that all partitions can be constructed in this way
---     let diff_to_partition (diffs : List ℕ) :=
---       (List.mapAccumr
---         (fun (next : ℕ) (rtotal : ℕ) ↦ (next + rtotal, next + rtotal))
---         diffs 1).snd;
---     -- this let encodes a partition as a word over Fin 2
---     let diff_to_word (s : List ℕ) : List (Fin 2) := 
---       List.flatMap
---         (fun (n : ℕ) ↦ 0 :: (List.replicate n 1))
---         (diff_to_partition s)
---     -- the language of all such words
---     let lang := { diff_to_word s | s : List ℕ } ;
---     -- we prove here that this language is EDT0L
---     Language.IsEDT0L lang := by
---   --
---   extract_lets diff_to_partition diff_to_word lang
---   -- TODO
---   sorry
+variable {α V T : Type*} [Fintype V] [Fintype T]
+variable {E : EDT0LGrammar α V T}
 
+@[simp]
+lemma rewriteWord_nonterminal_mem [BEq (Symbol α V)] [LawfulBEq (Symbol α V)]
+  {w : List (Symbol α V)} {v} {t : T} :
+    .nonterminal v ∈ E.rewriteWord t w ↔
+      ∃ (y : V) (_hy : .nonterminal y ∈ w), .nonterminal v ∈ E.tables t y := by
+  constructor
+  · intro h
+    induction w with
+    | nil =>
+      simp only [rewriteWord_nil, List.not_mem_nil] at h
+    | cons a as ih =>
+      simp only [rewriteWord_cons, List.mem_append] at h
+      obtain h | h := h
+      · cases a
+        · simp only [rewriteSymbol_terminal, List.mem_cons, reduceCtorEq, List.not_mem_nil,
+            or_self] at h
+        · rename_i y
+          exact ⟨y, List.mem_cons_self, h⟩
+      · replace ⟨y,hy,ih⟩ := ih h
+        exact ⟨y, List.mem_cons_of_mem a hy, ih⟩
+  · intro h
+    obtain ⟨y, hy, h⟩ := h
+    let idx? := w.finIdxOf? (.nonterminal y)
+    cases h₁ : idx?
+    · subst idx?
+      exfalso
+      exact List.finIdxOf?_eq_none_iff.mp h₁ hy
+    · rename_i i
+      subst idx?
+      rw [List.finIdxOf?_eq_some_iff] at h₁
+      obtain ⟨h₁, h₂⟩ := h₁
+      have h₃ : w.take i ++ [w[i]] ++ w.drop (i + 1) = w := by
+        simp only [Fin.getElem_fin, List.take_append_getElem, List.take_append_drop]
+      rw [h₁] at h₃
+      rw [← h₃]
+      simp only [List.append_assoc, List.cons_append, List.nil_append, rewriteWord_append,
+        rewriteWord_cons, rewriteSymbol_nonterminal, List.mem_append]
+      right
+      left
+      exact h
 
+lemma rewriteWord_mem (w : List (Symbol α V)) (x : Symbol α V) (t : T) :
+    x ∈ E.rewriteWord t w ↔ ∃ y ∈ w, x ∈ E.rewriteSymbol t y := by
+  constructor
+  · intro h
+    induction w with
+    | nil =>
+      simp_all only [rewriteWord_nil, List.not_mem_nil]
+    | cons a as ih =>
+      rename_i a'
+      simp_all only [
+        rewriteWord_cons, List.mem_append, List.mem_cons,
+        exists_eq_or_imp]
+      cases h with
+      | inl h_1 => simp_all only [true_or]
+      | inr h_2 => simp_all only [forall_const, or_true]
+  · intro h
+    obtain ⟨y, hy, h⟩ := h
+    have ⟨n, hy'⟩ := List.mem_iff_get.mp hy
+    change w[n] = y at hy'
+    have h₁ : w.take n ++ [w[n]] ++ w.drop (n + 1) = w := by
+      simp only [Fin.getElem_fin, List.take_append_getElem, List.take_append_drop]
+    simp only [hy'] at h₁
+    rw [← h₁]
+    simp only [List.append_assoc, List.cons_append, List.nil_append, rewriteWord_append,
+      rewriteWord_cons, List.mem_append]
+    right; left
+    exact h
+
+end EDT0LGrammar
 
