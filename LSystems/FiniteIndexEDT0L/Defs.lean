@@ -3,117 +3,100 @@ Copyright (c) 2025 Alex Bishop. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Alex Bishop
 -/
-import LSystems.EDT0L.Defs
+module
+
+public import LSystems.EDT0L.Defs
+public import LSystems.EDT0L.Basic
+
+@[expose] public section
 
 namespace EDT0LGrammar
 
-section SymbolIsNonterminal
-variable {α V : Type*} 
+variable {α V T : Type*} (E : EDT0LGrammar α V T)
 
-def SymbolIsNonterminal : Symbol α V → Bool
-  | .terminal _ => false
-  | .nonterminal _ => true
-
-@[simp]
-lemma SymbolIsNonterminal_nonterminal (v : V) :
-    (@SymbolIsNonterminal α V) (.nonterminal v) = true := rfl
-
-@[simp]
-lemma SymbolIsNonterminal_terminal (a : α) :
-    (@SymbolIsNonterminal α V) (.terminal a) = false := rfl
-
-@[simp]
-lemma SymbolIsNonterminal_single_nonterminal (v : V) :
-    List.countP (@SymbolIsNonterminal α V) [.nonterminal v] = 1 := rfl
-
-end SymbolIsNonterminal
-
-variable {α V T : Type*} [Fintype V] [Fintype T]
-variable (E : EDT0LGrammar α V T)
-
-def IsIndex (k : ℕ) : Prop :=
-  ∀ w : List (Symbol α V), E.generates w → w.countP SymbolIsNonterminal ≤ k
-
-lemma generates_implies_le_index {k : ℕ} (w : List (Symbol α V)) (h : E.IsIndex k) :
-    E.generates w → List.countP SymbolIsNonterminal w ≤ k := by
-  intro h'
-  unfold IsIndex at h
-  replace h := h w h'
-  exact h
+def IsIndex (k : ℕ) : Prop := ∀ w, E.Generates w → (filterNonterminals w).length ≤ k
 
 def IsFiniteIndex : Prop := ∃ k : ℕ, E.IsIndex k
 
-lemma index_at_least_one {k : ℕ} (h : E.IsIndex k) : k ≥ 1 := by
-  by_contra x
-  simp only [ge_iff_le, not_le, Nat.lt_one_iff] at x
-  replace h := h [.nonterminal E.initial] E.generates_initial
-  simp only [List.countP_singleton] at h
-  unfold SymbolIsNonterminal at h
-  subst x
-  simp only [↓reduceIte, nonpos_iff_eq_zero, one_ne_zero] at h
+lemma isIndex_k_geq_one {k : ℕ} (h : E.IsIndex k) : k ≥ 1 := by
+  by_contra contra
+  simp only [ge_iff_le, not_le, Nat.lt_one_iff] at contra
+  subst contra
+  obtain h' := h _ E.generates_initial
+  simp at h'
 
 end EDT0LGrammar
 
 def Language.IsEDT0LOfIndex {α : Type*} (L : Language α) (k : ℕ) : Prop :=
-  ∃ n m : ℕ, ∃ E : EDT0LGrammar α (Fin n) (Fin m), ∃ _ : E.IsIndex k, E.language = L
+  ∃ n m : ℕ, ∃ E : EDT0LGrammar α (Fin n) (Fin m), E.IsIndex k ∧ E.language = L
 
 def Language.IsFiniteIndexEDT0L {α : Type*} (L : Language α) : Prop :=
   ∃ k : ℕ, L.IsEDT0LOfIndex k
 
-lemma edt0l_of_index_implies_finite_index {α : Type*} (L : Language α) (k : ℕ) :
+lemma Language.isEDT0LOfIndex_imp_isFiniteIndexEDT0L {α : Type*} (L : Language α) (k : ℕ) :
     L.IsEDT0LOfIndex k → L.IsFiniteIndexEDT0L := fun h ↦ ⟨k, h⟩
 
 namespace EDT0LGrammar
-variable {α V T : Type*} [Fintype V] [Fintype T]
-variable (E : EDT0LGrammar α V T)
+variable {α V T : Type*} (E : EDT0LGrammar α V T)
 
-namespace EquivData
-variable {α V T V' T' : Type*} [Fintype V] [Fintype T] [Fintype V'] [Fintype T']
-variable (data : @EquivData α V T V' T' _ _ _ _)
+private lemma equiv_isIndex {α' V' T'} (equivα : α ≃ α') (equivV : V ≃ V') (equivT : T ≃ T')
+  (k : ℕ) (h : E.IsIndex k) :
+    (E.equiv equivα equivV equivT).IsIndex k := by
+  have k_geq_1 := isIndex_k_geq_one _ h
+  intro w h'
+  replace h := h _ ((equiv_generates equivα equivV equivT E w).mp h')
+  clear * - h k_geq_1
+  induction w generalizing k with
+  | nil =>
+    simp
+  | cons x xs ih =>
+    simp only [filterNonterminals_cons, ge_iff_le]
+    split
+    · exact ih k k_geq_1 h
+    · simp only [List.length_cons]
+      rw [equivWord_symm, equivWord_cons] at h
+      simp only [equivSymbol_nonterminal, ← equivWord_symm, filterNonterminals_cons,
+        List.length_cons] at h
+      cases h' : k - 1 with
+      | zero =>
+        have h'' : (filterNonterminals ((equivWord equivα equivV).symm xs)).length = 0 := by omega
+        simp only [List.length_eq_zero_iff] at h''
+        by_contra contra
+        simp only [ge_iff_le, not_le] at contra
+        simp only [filterNonterminals_equivWord_symm, List.map_eq_nil_iff] at h''
+        rw [h''] at contra
+        simp only [List.length_nil, zero_add, Nat.lt_one_iff] at contra
+        omega
+      | succ k' =>
+        simp_all
 
-lemma equivSymbol_preserves_nonterminal (a : Symbol α V') :
-    SymbolIsNonterminal a = SymbolIsNonterminal (data.equivSymbol.symm a) := by
-  unfold SymbolIsNonterminal
-  split <;> rfl
+@[simp← ]
+lemma equiv_isIndex_iff {α' V' T'} (equivα : α ≃ α') (equivV : V ≃ V') (equivT : T ≃ T')
+  (k : ℕ) :
+    E.IsIndex k ↔ (E.equiv equivα equivV equivT).IsIndex k := by
+  constructor
+  · exact equiv_isIndex E equivα equivV equivT k
+  · let E' := (equiv equivα equivV equivT) E
+    have h' : E = (equiv equivα.symm equivV.symm equivT.symm) E' :=
+      (Equiv.symm_apply_eq (equiv equivα.symm equivV.symm equivT.symm)).mp rfl
+    conv => intro x ; rw [h']
+    change E'.IsIndex k → _
+    exact equiv_isIndex E' equivα.symm equivV.symm equivT.symm k
 
-lemma equiv_preserves_fi {k : ℕ} (h : data.E.IsIndex k) :
-    data.grammar.IsIndex k := by
-  unfold EDT0LGrammar.IsIndex
-  intro w h₁
-  replace h := h (data.equivWord.symm w)
-  have h' := (data.grammar_generates_iff (w := data.equivWord.symm w)).mpr
-  simp only [Equiv.apply_symm_apply] at h'
-  replace h := h (h' h₁)
-  unfold EquivData.equivWord at h
-  simp only [Equiv.coe_fn_symm_mk, List.countP_map] at h
-  conv at h =>
-    left; arg 1
-    change fun a ↦ SymbolIsNonterminal (data.equivSymbol.symm a)
-    intro a
-    rw [← equivSymbol_preserves_nonterminal]
-  exact h
+theorem isIndex_imp_language_isEDT0LOfIndex [Finite V] [Finite T] (k : ℕ) :
+    E.IsIndex k → E.language.IsEDT0LOfIndex k := by
+  intro h
+  have := Fintype.ofFinite V
+  have := Fintype.ofFinite T
+  have h' := equiv_language_eq_language (Fintype.equivFin V) (Fintype.equivFin T) E
+  unfold Language.IsEDT0LOfIndex
+  exact ⟨_, _, _, (equiv_isIndex_iff E (Equiv.refl α) _ _ k).mp h, h'⟩
 
-end EquivData
-
-theorem fi_edt0l_grammars_generate_fi_edt0l_languages' {α V T : Type*} [Fintype V] [Fintype T]
-  {k : ℕ}
-  (E : EDT0LGrammar α V T) (h : E.IsIndex k) :
-    E.language.IsEDT0LOfIndex k := by
-  rename_i finN finH
-  have isoN := finN.equivFin
-  have isoH := finH.equivFin
-  let equiv_data := EquivData.mk E isoN isoH
-  let E' := equiv_data.grammar
-  use finN.card, finH.card, E'
-  have h₁ : E'.IsIndex k := by exact EquivData.equiv_preserves_fi equiv_data h
-  use h₁
-  replace h₁ := equiv_data.equiv_eq_language
-  exact Eq.symm h₁
-
-theorem fi_edt0l_grammars_generate_fi_edt0l_languages {α V T : Type*} [Fintype V] [Fintype T]
-  (E : EDT0LGrammar α V T) (h : E.IsFiniteIndex) :
-    E.language.IsFiniteIndexEDT0L := by
+theorem isFiniteIndex_imp_language_isFiniteIndexEDT0L [Finite V] [Finite T] :
+    E.IsFiniteIndex → E.language.IsFiniteIndexEDT0L := by
+  intro h
   replace ⟨k, h⟩ := h
-  exact ⟨k, fi_edt0l_grammars_generate_fi_edt0l_languages' E h⟩
+  replace h := isIndex_imp_language_isEDT0LOfIndex E k h
+  exact Language.isEDT0LOfIndex_imp_isFiniteIndexEDT0L E.language k h
 
 end EDT0LGrammar

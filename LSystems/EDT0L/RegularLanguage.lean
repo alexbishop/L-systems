@@ -3,253 +3,198 @@ Copyright (c) 2025 Alex Bishop. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Alex Bishop
 -/
-import LSystems.EDT0L.Defs
+module
+
+public import Mathlib.Computability.DFA
+public import LSystems.EDT0L.Defs
+public import Mathlib.Data.Finset.Lattice.Fold
+
+/-!
+# Regular languages are EDT0L
+
+In this file, we show that if a language `L : Language α` is regular, then it is also EDT0L.  We
+note here that the definition of regular languages provided by Mathlib does not require the alphabet
+`α` to be finite.  The main theorem in this file takes `Finite α` as a hypothesis as otherwise the
+result would not follow.
+
+## Main definition
+
+* `EDT0LGrammar.Regular dfa`: an EDT0L grammar which produces the same gramar as the deterministic
+  finite-state automaton `dfa`
+
+## Main theorems
+
+* `EDT0LGrammar.regular_eq_dfa`: the EDT0L grammar given by the definition above generates exactly
+  the same language as the given dfa.
+* `Language.isRegular_imp_isEDT0L`: with the additional hypothesis `Finite α`, a language is EDT0L
+  if it is regular.
+-/
+
+@[expose] public section
 
 namespace EDT0LGrammar
 
-structure DFAData (α Q : Type*) [Fintype α] [Fintype Q] where
-  M : DFA α Q
+inductive Regular.encoded_table {α σ} (dfa : DFA α σ) where
+  | step (a : α)
+  | final (q : σ) (h : q ∈ dfa.accept)
+deriving DecidableEq
 
-namespace DFAData
-variable {α Q : Type*} [Fintype α] [Fintype Q]
-variable (data : DFAData α Q)
+instance {α σ} [Fintype α] [Fintype σ] [DecidableEq α] [DecidableEq σ]
+  (dfa : DFA α σ) [DecidablePred (· ∈ dfa.accept)] :
+    Fintype (Regular.encoded_table dfa) where
+  elems :=
+    (Fintype.elems.sup fun (a : α) ↦ { .step a }) ∪
+    (Fintype.elems.sup fun (q : σ) ↦ (if h : q ∈ dfa.accept then { .final q h } else ∅))
+  complete := by
+    intro x
+    cases x with
+    | step a =>
+      refine Finset.mem_union_left _ ?_
+      rw [Finset.mem_sup]
+      use a, Fintype.complete a
+      rw [Finset.mem_singleton]
+    | final q h =>
+      refine Finset.mem_union_right _ ?_
+      rw [Finset.mem_sup]
+      use q, Fintype.complete q
+      simp only [↓reduceDIte, Finset.mem_singleton, h]
 
-noncomputable def grammar : EDT0LGrammar α Q (α ⊕ Unit) where
-  initial := data.M.start
-  tables := fun h ↦ match h with
-    | .inl t =>
-      fun (q : Q) ↦ [Symbol.terminal t, Symbol.nonterminal (data.M.step q t)]
-    | .inr _ => fun (q : Q) =>
-      have _prop_dec (q : Q) : Decidable (q ∈ data.M.accept) := Classical.propDecidable _
-      if q ∈ data.M.accept then [] else [ .nonterminal q ]
+def Regular {α σ} [DecidableEq σ] (dfa : DFA α σ) :
+    EDT0LGrammar α σ (Regular.encoded_table dfa) where
+  initial := dfa.start
+  table :=
+    fun
+    | .step a, q => [.terminal a, .nonterminal (dfa.step q a)]
+    | .final q' _, q => if q = q' then [] else [.nonterminal q]
 
-lemma generated_words (w : List (Symbol α Q)) :
-  data.grammar.generates w → ∃ u : List α,
-    (u.map .terminal = w ∧ data.M.evalFrom data.M.start u ∈ data.M.accept)
-    ∨ (w = (u.map .terminal) ++ [.nonterminal (data.M.evalFrom data.M.start u)]) := by 
-  --
+inductive Regular.NormalForm {α σ} (dfa : DFA α σ) (w : List (Symbol α σ)) : Prop where
+  | processing
+      (u : List α)
+      (h : w = u.map .terminal ++ [.nonterminal (dfa.evalFrom dfa.start u)])
+  | done
+      (u : List α)
+      (h : w = u.map .terminal)
+      (h_accept : dfa.evalFrom dfa.start u ∈ dfa.accept)
+
+private lemma regular_generates_imp {α σ} [DecidableEq σ] (dfa : DFA α σ) (w : List (Symbol α σ)) :
+    (Regular dfa).Generates w → Regular.NormalForm dfa w := by
   intro h
-  unfold EDT0LGrammar.generates at h
-  unfold EDT0LGrammar.derives at h
-  induction h
-  case refl =>
-    use []
-    right
-    simp_all only [List.map_nil, DFA.evalFrom_nil,
-        List.nil_append, List.cons.injEq, Symbol.nonterminal.injEq,   and_true]
+  induction h with
+  | refl =>
+    refine Regular.NormalForm.processing [] ?_
+    simp only [List.map_nil, DFA.evalFrom_nil, List.nil_append]
     rfl
-  case tail x y ih₁ ih₂ ih₃ =>
-    replace ⟨u, ih₃⟩ := ih₃ 
-    cases ih₃
-    case inl ih₃ =>
-      replace ⟨ih₃, ih₄⟩ := ih₃
-      subst ih₃
-      replace ih₂ := EDT0LGrammar.rewrites_terminals data.grammar ih₂
-      subst ih₂
-      use u
-      left
-      constructor
-      · rfl
-      · exact ih₄ 
-    case inr ih₃ => 
-      unfold EDT0LGrammar.rewrites at ih₂
-      unfold EDT0LGrammar.rewriteWord at ih₂
-      unfold EDT0LGrammar.rewriteSymbol at ih₂
-      replace ⟨τ, ih₂⟩ := ih₂
-      cases τ
-      case inl τ => 
-        use u ++ [τ]
-        right
-        unfold DFAData.grammar at ih₂
-        simp only [] at ih₂
-        subst ih₂
-        subst ih₃
-        clear ih₁
-        rw [List.flatMap_append]
-        simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil, List.map_append,
-          List.map_cons, List.map_nil, DFA.evalFrom_append_singleton, List.append_assoc,
-          List.cons_append, List.nil_append, List.append_cancel_right_eq]
-        induction u
-        case nil =>
-          simp only [List.map_nil, List.flatMap_nil]
-        case cons a as ih =>
-          simp_all only [List.map_cons, List.flatMap_cons, List.cons_append, List.nil_append]
-      case inr τ =>
-        use u
-        by_cases h : data.M.evalFrom data.M.start u ∈ data.M.accept
-        · left
-          constructor
-          · rw [ih₃] at ih₂
-            rw [List.flatMap_append] at ih₂
-            conv at ih₂ =>
-              arg 1
-              arg 1
-              unfold DFAData.grammar
-              simp only
-              rw [List.flatMap_map]
-              simp only
-            conv at ih₂ =>
-              arg 1
-              arg 2
-              unfold DFAData.grammar
-              simp only
-              simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
-              simp only [h]
-              simp only [↓reduceIte]
-            subst ih₂
-            clear ih₁
-            clear ih₃
-            clear h
-            simp only [List.append_nil]
-            induction u
-            · simp_all only [List.map_nil, List.flatMap_nil]
-            · rename_i a as ih
-              simp_all only [List.map_cons, List.flatMap_cons, List.cons_append, List.nil_append]
-          · exact h
-        · right
-          simp only [ih₃] at ih₂
-          rw [List.flatMap_append] at ih₂
-          conv at ih₂ =>
-            arg 1
-            arg 2
-            unfold DFAData.grammar
-            simp only
-          subst ih₂
-          subst ih₃
-          clear ih₁
-          simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil, h]
-          conv =>
-            lhs
-            rhs
-            change [Symbol.nonterminal (data.M.evalFrom data.M.start u)]
-          rw [List.flatMap_map]
-          simp only [List.append_cancel_right_eq]
-          clear h
-          induction u
-          · simp_all only [List.map_nil, List.flatMap_nil]
-          · rename_i a as ih
-            simp_all only [List.map_cons, List.flatMap_cons, List.cons_append, List.nil_append]
+  | tail x y ih =>
+    rename_i b c
+    cases ih with
+    | processing u h =>
+      change (Regular dfa).Derives _ _ at x
+      subst h
+      obtain ⟨t, rfl⟩ := y
+      simp only [rewriteWord_append, rewriteWord_terminals, rewriteWord_cons,
+        rewriteSymbol_nonterminal, rewriteWord_nil, List.append_nil]
+      unfold Regular
+      simp only
+      split
+      · rename_i a
+        refine Regular.NormalForm.processing (u ++ [a]) ?_
+        simp only [List.map_append, List.map_cons, List.map_nil, DFA.evalFrom_append_singleton,
+          List.append_assoc, List.cons_append, List.nil_append]
+      · rename_i t q' h_accept
+        split
+        · rename_i h_accept'
+          simp only [List.append_nil]
+          subst h_accept'
+          exact .done u rfl h_accept
+        · exact Regular.NormalForm.processing u rfl
+    | done u h h_accept =>
+      subst h
+      obtain ⟨t, rfl⟩ := y
+      simp only [rewriteWord_terminals]
+      exact Regular.NormalForm.done u rfl h_accept
 
-lemma generated_words' (w : List α) :
-  data.grammar.generates (
-    (w.map .terminal)
-      ++ [.nonterminal (data.M.evalFrom data.M.start w)]) := by 
-  --
-  unfold EDT0LGrammar.generates
-  unfold EDT0LGrammar.derives
-  induction w using List.reverseRecOn with
+private lemma regular_generated_processing_imp_generates {α σ} [DecidableEq σ]
+  (dfa : DFA α σ) (w : List (Symbol α σ))
+  (u : List α) (h : w = u.map .terminal ++ [.nonterminal (dfa.evalFrom dfa.start u)]) :
+    (Regular dfa).Generates w := by
+  subst h
+  induction u using List.reverseRecOn with
   | nil =>
-    simp_all only [List.map_nil, DFA.evalFrom_nil, List.nil_append]
+    simp only [List.map_nil, DFA.evalFrom_nil, List.nil_append]
+    exact (Regular dfa).generates_initial
+  | append_singleton as a ih =>
+    apply generates_rewrites_tail ih ?_
+    use .step a
+    simp only [rewriteWord_append, rewriteWord_terminals, rewriteWord_cons,
+      rewriteSymbol_nonterminal, rewriteWord_nil, List.append_nil, List.map_append,
+      List.map_cons, List.map_nil, DFA.evalFrom_append_singleton, List.append_assoc,
+      List.cons_append, List.nil_append, List.append_cancel_left_eq]
     rfl
-  | append_singleton as a h =>
-    have h' :
-      data.grammar.rewrites
-        (List.map Symbol.terminal as
-          ++ [Symbol.nonterminal (data.M.evalFrom data.M.start as)])
-        (List.map Symbol.terminal (as ++ [a])
-          ++ [Symbol.nonterminal (data.M.evalFrom data.M.start (as ++ [a]))]) := by
-      --
-      unfold EDT0LGrammar.rewrites
-      use .inl a
-      unfold EDT0LGrammar.rewriteWord
-      unfold EDT0LGrammar.rewriteSymbol
-      unfold DFAData.grammar
-      simp only 
-      rw [List.flatMap_append]
-      rw [List.flatMap_map]
-      simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil, List.map_append,
-        List.map_cons, List.map_nil, DFA.evalFrom_append_singleton, List.append_assoc,
-        List.cons_append, List.nil_append, List.append_cancel_right_eq]
-      clear h
-      induction as with
-      | nil => simp only [List.flatMap_nil, List.map_nil]
-      | cons as_head as_tail h =>
-        simp_all only [List.flatMap_cons, List.cons_append, List.nil_append, List.map_cons]
 
-    exact Relation.ReflTransGen.tail h h'
+lemma regular_generates_iff {α σ} [DecidableEq σ] (dfa : DFA α σ) (w : List (Symbol α σ)) :
+    (Regular dfa).Generates w ↔ Regular.NormalForm dfa w := by
+  constructor
+  · exact regular_generates_imp dfa w
+  · intro h
+    cases h with
+    | processing u h' =>
+      exact regular_generated_processing_imp_generates dfa w u h'
+    | done u h h_accept' =>
+      have pre := regular_generated_processing_imp_generates dfa
+        (w ++ [.nonterminal <| dfa.evalFrom dfa.start u]) u
+        (by 
+          simp only [List.append_cancel_right_eq]
+          exact h )
+      apply generates_rewrites_tail pre ?_
+      use .final (dfa.evalFrom dfa.start u) ((DFA.mem_acceptsFrom dfa).mp h_accept')
+      subst h
+      simp only [rewriteWord_append, rewriteWord_terminals, rewriteWord_cons,
+        rewriteSymbol_nonterminal, rewriteWord_nil, List.append_nil, List.append_right_eq_self]
+      unfold Regular
+      simp
 
-theorem languages_are_identical (w : List α) :
-    data.grammar.generates (w.map .terminal) ↔ data.M.evalFrom data.M.start w ∈ data.M.accept := by
-  --
+theorem regular_eq_dfa {α σ} [DecidableEq σ] (dfa : DFA α σ) :
+    (Regular dfa).language = dfa.accepts := by
+  ext1 w
   constructor
   · intro h
-    replace ⟨u, h⟩ := data.generated_words (w.map .terminal) h
-    cases h
-    · rename_i h
-      have ⟨left, right⟩ := h
-      replace left : u = w := by
-        clear right
-        clear h
-        let f := fun (a : α) ↦ (.terminal a : Symbol α Q)
-        have hh : Function.Injective f := by
-          unfold Function.Injective
-          intro a₁ a₂ a
-          simp_all only [Symbol.terminal.injEq, f]
-        replace hh := List.map_injective_iff.mpr hh
-        unfold Function.Injective at hh
-        exact hh left
-      subst left
-      simp_all only [true_and]
-    · rename_i h
-      exfalso
-      have h' : List.getLast (w.map Symbol.terminal)
-                (by
-                  simp_all only [
-                    ne_eq, List.append_eq_nil_iff, List.map_eq_nil_iff,
-                    List.cons_ne_self, and_false, not_false_eq_true])
-              = .nonterminal (data.M.evalFrom data.M.start u) := by
-        --
-        simp_all only [ne_eq, List.cons_ne_self, not_false_eq_true, List.getLast_append_of_ne_nil,
-          List.getLast_singleton]
-      --
-      simp only [List.getLast_map] at h'
-      simp_all only [reduceCtorEq]
+    simp only [language_mem_iff] at h
+    replace h := (regular_generates_iff dfa _).mp h
+    cases h with
+    | processing u h =>
+      replace h := congrArg (List.getLast? (α := Symbol α σ)) h
+      simp only [List.getLast?_map, List.getLast?_append, List.getLast?_singleton, Option.some_or,
+        Option.map_eq_some_iff, reduceCtorEq, and_false, exists_false] at h
+    | done u h h_accept =>
+      obtain rfl : u = w := by
+        clear * - h
+        induction w generalizing u with
+        | nil =>
+          simp only [List.map_nil, List.nil_eq, List.map_eq_nil_iff] at h
+          exact h
+        | cons a as ih =>
+          replace h := Eq.symm h
+          rw [List.map_cons, List.map_eq_cons_iff] at h
+          obtain ⟨a',as',h1, h2, h3⟩ := h
+          --
+          replace ih := ih as' (Eq.symm h3)
+          simp only [Symbol.terminal.injEq] at h2
+          subst ih h2
+          exact h1
+      exact h_accept
   · intro h
-    have h' := data.generated_words' w
-    unfold EDT0LGrammar.generates
-    unfold EDT0LGrammar.derives
-    apply Relation.ReflTransGen.tail h' ?_
-    unfold EDT0LGrammar.rewrites
-    use .inr ()
-    unfold EDT0LGrammar.rewriteWord
-    unfold EDT0LGrammar.rewriteSymbol
-    unfold DFAData.grammar
-    simp only
-    rw [List.flatMap_append]
-    simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
-    simp only [h]
-    simp only [↓reduceIte, List.append_nil]
-    rw [List.flatMap_map]
-    clear h
-    clear h'
-    induction w
-    · simp only [List.flatMap_nil, List.map_nil]
-    · rename_i head tail ih
-      simp_all only [List.flatMap_cons, List.cons_append, List.nil_append, List.map_cons]
-
-end DFAData
-
-theorem regular_languages_are_edt0l {α : Type*} [Fintype α] (L : Language α) :
-    L.IsRegular → L.IsEDT0L := by
-  --
-  unfold Language.IsRegular
-  intro h
-  have ⟨ _, _, M, h₁ ⟩ := h
-  --
-  let data := DFAData.mk M
-  have h₂ := data.languages_are_identical
-
-  let E := data.grammar
-
-  have h₃ : E.language = M.accepts := by
-    unfold EDT0LGrammar.language
-    unfold DFA.accepts
-    unfold DFA.acceptsFrom
-    subst h₁
-    simp_all only [exists_const_iff, data, E]
-
-  rw [h₁] at h₃
-  rw [← h₃]
-  exact edt0l_grammars_generate_edt0l_languages E
+    simp only [language_mem_iff]
+    refine (regular_generates_iff dfa (List.map Symbol.terminal w)).mpr ?_
+    exact .done w rfl h
 
 end EDT0LGrammar
+
+theorem Language.isRegular_imp_isEDT0L {α} [Finite α] (L : Language α) :
+    L.IsRegular → L.IsEDT0L := by
+  classical
+  have : Fintype α := Fintype.ofFinite α
+  intro h
+  replace ⟨σ, finσ, dfa, h⟩ := h
+  rw [← EDT0LGrammar.regular_eq_dfa dfa] at h
+  rw [← h]
+  exact EDT0LGrammar.language_isEDT0L _

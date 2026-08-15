@@ -5,7 +5,18 @@
 > [!NOTE]
 > This is very much a work in progress. In fact, this is the first project that I am writing in Lean.
 
-Generated Documentation is available from https://alexbishop.github.io/L-systems/docs
+Features
+ * definition of EDT0L grammars and lanuages
+ * definition of EDT0L grammars of finite index
+ * definition of LULT EDT0L grammars
+ * proof that a language is LULT if and only if it is EDT0L of finite index
+ * (finite index) EDT0L languages are closed under union
+ * regular languages are EDT0L of index 1
+
+TODO:
+ * prove that EDT0L languages are closed under string transductions
+
+Generated documentation is available from https://alexbishop.github.io/L-systems/docs
 
 The intention of this project is to formalise the concepts and properties of EDT0L and ET0L languages in order to prove the results in the following papers.
 
