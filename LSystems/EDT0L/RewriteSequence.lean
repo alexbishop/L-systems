@@ -23,7 +23,7 @@ an alternative definition which makes this sequence of tables explicit.
 ## Main theorem
 
 * `EDT0LGrammar.derives_iff_rewriteSeq`: shows that, in some way, `EDT0LGrammar.Derives` and
-  `EDT0LGrammar.rewriteSeq` are equivelent.
+  `EDT0LGrammar.rewriteSeq` are equivalent.
 -/
 
 @[expose] public section
@@ -167,42 +167,5 @@ lemma equiv_rewriteSeq' {α' V' T'}
   have := E.equiv_rewriteSeq equivα equivV equivT
     (t.map equivT.symm) (equivWord equivα.symm equivV.symm u)
   simpa
-
--- @[simp]
--- lemma rewriteSeq_count_equivWord {α' V' T'}
---   [DecidableEq α] [DecidableEq V]
---   [DecidableEq α'] [DecidableEq V']
---   (equivα : α ≃ α') (equivV : V ≃ V') (equivT : T ≃ T')
---   (t : List T)
---   (u : List (Symbol α V)) (s : Symbol α V) :
---     List.count
---       (equivSymbol equivα equivV s)
---       ((equiv equivα equivV equivT E).rewriteSeq
---         (t.map equivT)
---         (equivWord equivα equivV u)) =
---     List.count s (E.rewriteSeq t u) := by
---   simp only [rewriteSeq_equivWord]
---   induction (E.rewriteSeq t u) with
---   | nil =>
---     rfl
---   | cons x xs ih =>
---     simp only [equivWord_cons, List.count_cons, ih, beq_iff_eq, EmbeddingLike.apply_eq_iff_eq]
---
--- @[simp]
--- lemma rewriteSeq_length_equivWord {α' V' T'}
---   (equivα : α ≃ α') (equivV : V ≃ V') (equivT : T ≃ T')
---   (t : List T)
---   (u : List (Symbol α V)) :
---     List.length
---       ((equiv equivα equivV equivT E).rewriteSeq
---         (t.map equivT)
---         (equivWord equivα equivV u)) =
---     List.length (E.rewriteSeq t u) := by
---   simp only [rewriteSeq_equivWord]
---   induction (E.rewriteSeq t u) with
---   | nil =>
---     rfl
---   | cons x xs ih =>
---     simp only [equivWord_cons, List.length_cons, ih]
 
 end EDT0LGrammar

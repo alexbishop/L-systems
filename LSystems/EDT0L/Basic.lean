@@ -8,7 +8,10 @@ module
 public import LSystems.EDT0L.Defs
 
 /-!
-# Basic 
+# Basic results
+
+This file contains a collection of results that don't fit anywhere else, or are generally useful
+for other proofs.
 -/
 
 @[expose] public section
@@ -70,8 +73,11 @@ lemma one_language {α} : one.language = (1 : Language α) := by
       List.append_nil, List.map_nil, Fin.exists_fin_one, Fin.isValue]
     rfl
 
+/-- We note here that `0 : Language α` is the empty language, i.e., the language which contins no
+words. -/
 theorem language_0_isEDT0L {α} : Language.IsEDT0L (0 : Language α) := ⟨1, 0, zero, zero_language⟩
 
+/-- We note here that `1 : Language α` is the language which only contains the empty word. -/
 theorem language_1_isEDT0L {α} : Language.IsEDT0L (1 : Language α) := ⟨1, 1, one, one_language⟩
 
 def getNonterminal? {α V} : Symbol α V → Option V

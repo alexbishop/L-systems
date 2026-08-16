@@ -1,5 +1,5 @@
 /-
-Copyright (c) 2025 Alex Bishop. All rights reserved.
+Copyright (c) 2026 Alex Bishop. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Alex Bishop
 -/
@@ -17,6 +17,7 @@ import Mathlib.Data.Fin.Tuple.Take
 namespace EDT0LGrammar
 namespace FiEDT0L2LULT
 
+@[ext]
 structure Word (V : Type*) (k : ℕ) where
   ℓ : Fin (k + 1)
   get : Fin ℓ → V
@@ -781,8 +782,7 @@ lemma grammar_eq_toNumberedList {α V T} (E : EDT0LGrammar α V T) {k} (h : E.Is
           have : ww' = ww'2 := by
             subst ww' ww'2
             unfold Word.rewrite Word.mk'
-            simp only [Word.mk.injEq, Fin.mk.injEq]
-            split_ands
+            ext
             · simp only [Word.rewriteLength, Word.rewriteFilterNonterminals, Word.toList,
                 List.ofFn_get]
               exact Nat.succ_inj.mp (congrArg Nat.succ (congrArg List.length hh1))
@@ -835,110 +835,6 @@ lemma grammar_eq_toNumberedList {α V T} (E : EDT0LGrammar α V T) {k} (h : E.Is
       exact Eq.symm (filterNonterminals_rewriteWord (E.rewriteSeq xs E.initialWord) E x)
     simp [this]
     rfl
-  -- induction t using List.reverseRecOn with
-  -- | nil =>
-  --   simp only [rewriteSeq_refl, filterNonterminals_cons, filterNonterminals_nil,
-  --     Word.toNumberedList]
-  --   -- split_ands
-  --   -- · aesop
-  --   -- · have : 1 % (k + 1) = 1 := by aesop
-  --   --   have : Fin (1 % (k+1)) =
-  --   --       Fin (filterNonterminals (α := α) [.nonterminal E.initial]).length := by tauto
-  --   --   rw [this]
-  --   --   simp only [heq_eq_eq]
-  --   --   change _ = [E.initial].get
-  --   --   ext1 x
-  --   --   simp
-  --   -- · have : 1 % (k + 1) = 1 := by aesop
-  --   --   have h : Fin (1 % (k + 1)) =
-  --   --       Fin (filterNonterminals (α := α) [.nonterminal E.initial]).length := by tauto
-  --   --   exact (Fin.heq_ext_iff this).mpr rfl
-  --   
-  --   sorry
-  -- | append_singleton ts t ih =>
-  --   simp only [rewriteSeq_seq_append, rewriteSeq_seq_cons, rewriteSeq_refl]
-  --   rw [filterNonterminals_rewriteSymbols, ih]
-  --   unfold Word.toNumberedList grammar
-  --   change
-  --     let x := _
-  --     let y := _
-  --     let f : _ → _ := _
-  --     filterNonterminals (List.flatMap f x) = y
-  --   intro x y f
-  --   --
-  --   have go (i : ℕ) :
-  --       filterNonterminals (List.flatMap f (x.take i)) =
-  --       y.take (List.length <| filterNonterminals (List.flatMap f (x.take i))) := by
-  --     induction i with
-  --     | zero =>
-  --       rfl
-  --     | succ j ih =>
-  --       rw [List.take_add]
-  --       simp only [List.flatMap_append, filterNonterminals_append, List.length_append]
-  --       rw [ih]
-  --       conv => rhs; rw [List.take_add]
-  --       change let a := _ ; let b := _ ; a ++ _ = b ++ _
-  --       intro a b
-  --       have : a = b := by subst a b; simp
-  --       rw [this, List.append_cancel_left_eq]
-  --       clear this a b
-  --       if hj : j < x.length then
-  --         have : List.take 1 (List.drop j x) = [x.get ⟨j, hj⟩] :=
-  --           List.take_one_drop_eq_of_lt_length hj
-  --         simp only [this]
-  --         simp only [List.get_eq_getElem, List.flatMap_cons, List.flatMap_nil, List.append_nil,
-  --           List.length_take]
-  --         subst x y f
-  --         simp only [List.getElem_ofFn, List.length_ofFn]
-  --         simp only [Word.canRewrite_rewriteSeq, ↓reduceDIte]
-  --         clear * - h
-  --
-  --         sorry
-  --       else
-
--- lemma p2_imp_canRewrite {α V T k} (ts : List T) (t : T)
---   (E : EDT0LGrammar α V T)
---   (h : E.IsIndex k)
---   (hu : List.length (filterNonterminals (E.rewriteSeq ts E.initialWord)) ≤ k)
---   (p2 : filterNonterminals ((grammar E k h).rewriteSeq ts (grammar E k h).initialWord) =
---           (Word.mk' hu).toNumberedList) :
---     (Word.mk' hu).CanRewrite E t := by
---   unfold Word.CanRewrite Word.rewriteLength Word.rewriteFilterNonterminals
---   have p2' := congrArg (List.map fun x ↦ x.unlabel) p2
---   unfold Word.toNumberedList at p2'
---   simp only [List.map_ofFn] at p2'
---   change let f : _ → _ := _ ; _ = List.ofFn f at p2'
---   extract_lets f at p2'
---   have : f = (Word.mk' hu).get := rfl
---   rw [this] at p2'
---   change _ = (Word.mk' hu).toList at p2'
---   -- rw [← p2']
---   -- simp only [gt_iff_lt]
---   --
---   have go (x : List (Symbol α (Nonterminal V k))) :
---       filterNonterminals
---         (List.flatMap (E.table t) (List.map (fun x ↦ x.unlabel) (filterNonterminals x))) =
---       (List.map (fun x ↦ x.unlabel)
---         (filterNonterminals ((grammar E k h).rewriteWord t x))) := by
---     clear * -
---     induction x with
---     | nil =>
---       rfl
---     | cons x xs ih =>
---       simp only [filterNonterminals_cons, rewriteWord_cons, filterNonterminals_append,
---         List.map_append]
---       split
---       · simp [ih]
---       · simp only [List.map_cons, List.flatMap_cons, filterNonterminals_append, ih,
---           rewriteSymbol_nonterminal, List.append_cancel_right_eq]
---         rename_i v
---         sorry
-  --
-  --
-  -- unfold filterNonterminals
-  -- simp [List.map_filterMap]
-  --
-  -- sorry
 
 lemma grammar_normalForm {α V T : Type*} (E : EDT0LGrammar α V T) (k : ℕ)
   (h : E.IsIndex k) (s : List T) :
@@ -993,8 +889,11 @@ lemma grammar_normalForm {α V T : Type*} (E : EDT0LGrammar α V T) (k : ℕ)
                 have := h (E.rewriteSeq (xs ++ [x]) E.initialWord) E.generates_rewriteSeq
                 exact Nat.lt_succ_of_le this
               simp only [grammar, Nonterminal.rewrite, Word.rewriteNonterminal,
-                rewriteSymbol_nonterminal, this, ↓reduceDIte, unlabelWord_numberNonterminals]
-              rfl
+                rewriteSymbol_nonterminal, this, ↓reduceDIte]
+              exact
+                unlabelWord_numberNonterminals
+                (v.word.rewrite E x (of_eq_true (eq_true this)))
+                  _ _ _ _ _
           else
             simp_all
       have := go ((grammar E k h).rewriteSeq xs (grammar E k h).initialWord).length
@@ -1046,6 +945,8 @@ lemma grammar_language_eq {α V T} (E : EDT0LGrammar α V T) (k : ℕ) (h : E.Is
     induction w with
     | nil => rfl
     | cons x xs ih => simp_all
+
+/- TODO: This result can be strenthened as we only every consider one case of being LULT. -/
 
 lemma grammar_isLULT {α V T} [DecidableEq V] (E : EDT0LGrammar α V T) (k : ℕ) (h : E.IsIndex k) :
     (grammar E k h).IsLULT := by

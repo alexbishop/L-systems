@@ -8,6 +8,33 @@ module
 public import LSystems.EDT0L.Defs
 public import LSystems.EDT0L.Basic
 
+/-!
+# Finite Index EDT0L Grammars
+
+An EDT0L grammar is said to be index `k : ℕ`, if every derivation of the language contains at most
+`k` nonterminals.  An EDT0L grammar is said to be fintie index if there exists such a `k`.
+
+## Main definitions
+
+* `EDT0LGrammar.IsIndex` A predicate indicating that a given EDT0L grammar as a given index
+* `EDT0LGrammar.IsFiniteIndex` A predicate indicates that an EDT0L grammar has some index
+
+**Language predicates:**
+
+* `Language.IsEDT0LOfIndex L k`
+  There is an EDT0L grammar of index k which generates the language `L`
+* `Language.IsFiniteIndexEDT0L L`
+  There is a finite index EDT0L grammar which generates the language `L`
+
+## Main theorems
+
+* `EDT0LGrammar.isIndex_imp_language_isEDT0LOfIndex`
+  If an EDT0L grammar has index k, then its corresponding language has index k
+* `EDT0LGrammar.isFiniteIndex_imp_language_isFiniteIndexEDT0L`
+  If an EDT0L grammar is finite index, then its corresponding language is finite index
+-/
+
+
 @[expose] public section
 
 namespace EDT0LGrammar

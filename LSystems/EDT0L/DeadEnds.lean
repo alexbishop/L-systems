@@ -7,6 +7,17 @@ module
 
 public import LSystems.EDT0L.Defs
 
+/-!
+# Dead ends
+
+A set of nonterminals is a *dead end set* if no sequence of tables of the grammar can remove such
+a variable.  Such symbols are called dead ends as they kill any chance of a word continuing on to
+eventualy produce a word in the language associated to the given EDT0L grammar.
+
+Such sets of noterminals are used in the literature to simplify the construction of EDT0L grammars.
+In particualr, such nonterminals are used to model the case where an *incorrect* or *problematic*
+choice of table was applied in a derivation of the grammar. -/
+
 @[expose] public section
 
 namespace EDT0LGrammar

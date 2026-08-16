@@ -10,6 +10,31 @@ public import Mathlib.Data.Finset.Lattice.Fold
 public import LSystems.EDT0L.RewriteSequence
 public import LSystems.EDT0L.Mapped
 
+/-!
+# Attach
+
+The defintion of EDT0L languages, as provided in `Language.IsEDT0L`.  However, by inspecting the
+defintion of EDT0L languages, one quickly realised that there is always a finite subtype over which
+the words in any given EDT0L language can be written.  This file contains some lemmas for working
+with such subtypes.
+
+The results provided here are to assist with the technical details in some proofs.  In particular,
+they allow us to be able to assume the additional hypothesis that the set of terminals is finite.
+
+## Main defintions
+
+* `EDT0LGrammar.visibleα` The subtype of terminals letters which appear in tables of the EDT0L
+  grammar.  Note here that if a terminal appears in an output word, then it must appear in a
+  table of the grammar.
+* `EDT0LGrammar.attach` An EDT0L grammar which produces the *same* language as a given EDT0LGrammar,
+  except over the alphabet given by `EDT0LGrammar.visibleα`.
+
+## Main theorem
+
+`EDT0LGrammar.language_eq_attach_language_map_val` proves that the definition `EDT0LGrammar.attach`
+has the desired property.
+-/
+
 @[expose] public section
 
 namespace EDT0LGrammar
@@ -17,6 +42,8 @@ namespace EDT0LGrammar
 abbrev visibleα {α V T} (E : EDT0LGrammar α V T) :=
   { a : α // ∃ (t : T) (v : V), .terminal a ∈  E.table t v}
 
+/-- If the grammar `E` has finitely many nonterminal and fintiely many tables, then `E.visibleα` is
+also finite. -/
 instance {α V T} [Fintype V] [Fintype T] [DecidableEq α]
   (E : EDT0LGrammar α V T) : Fintype E.visibleα where
   elems :=

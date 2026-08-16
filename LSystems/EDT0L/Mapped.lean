@@ -9,6 +9,21 @@ public import LSystems.EDT0L.Defs
 public import LSystems.EDT0L.Basic
 public import LSystems.EDT0L.RewriteSequence
 
+/-!
+# Closure under Monoid Homomorphism
+
+The class of EDT0L languages is closed under monoid homomorphism.
+
+## Main definition
+
+* `EDT0LGrammar.Mapped` an EDT0L grammar which produced the language after a given letter mapping
+
+## Main theorems
+
+* `EDT0LGrammar.mapped_language`: The afforementioned grammar has the desired property.
+* `Language.isEDT0L_map`: EDT0L languages are closed under monoid Homomorphism.
+-/
+
 @[expose] public section
 
 namespace EDT0LGrammar
@@ -93,7 +108,7 @@ lemma mapped_rewriteSeq {α α' V T} (f : α → α') (E : EDT0LGrammar α V T) 
   | nil => rfl
   | append_singleton xs x ih => simp [ih]
 
-lemma mapped_language {α α' V T} (f : α → α') (E : EDT0LGrammar α V T) :
+theorem mapped_language {α α' V T} (f : α → α') (E : EDT0LGrammar α V T) :
     (E.Mapped f).language = E.language.map f := by
   ext1 w
   simp only [language_mem_iff, generates_iff_rewriteSeq, mapped_initialWord, mapped_rewriteSeq]
@@ -103,7 +118,7 @@ lemma mapped_language {α α' V T} (f : α → α') (E : EDT0LGrammar α V T) :
     obtain ⟨u, h'⟩ := mapWord_eq_terminals _ _ _ h
     use u
     constructor
-    · simp only [language, Set.mem_setOf_eq, ← h']
+    · simp only [language, Set.mem_ofPred_eq, ← h']
       exact generates_rewriteSeq E
     · rw [h', mapWord_terminals] at h
       change List.map (Symbol.terminal ∘ f) _ = _ at h
@@ -112,7 +127,7 @@ lemma mapped_language {α α' V T} (f : α → α') (E : EDT0LGrammar α V T) :
       exact h
   · intro h
     obtain ⟨w', h1, h2⟩ := h
-    simp only [language, generates_iff_rewriteSeq, Set.mem_setOf_eq] at h1
+    simp only [language, generates_iff_rewriteSeq, Set.mem_ofPred_eq] at h1
     obtain ⟨s, h1⟩ := h1
     use s
     rw [h1]
@@ -124,7 +139,7 @@ lemma mapped_language {α α' V T} (f : α → α') (E : EDT0LGrammar α V T) :
 
 end EDT0LGrammar
 
-lemma Language.isEDT0L_map {α α'} (f : α → α') (L : Language α) (h : L.IsEDT0L) :
+theorem Language.isEDT0L_map {α α'} (f : α → α') (L : Language α) (h : L.IsEDT0L) :
     (L.map f).IsEDT0L := by
   obtain ⟨n, m, E, h⟩ := h
   use n, m, E.Mapped f

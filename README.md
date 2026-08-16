@@ -2,9 +2,6 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-> [!NOTE]
-> This is very much a work in progress. In fact, this is the first project that I am writing in Lean.
-
 Features
  * definition of EDT0L grammars and lanuages
  * definition of EDT0L grammars of finite index
@@ -14,9 +11,11 @@ Features
  * regular languages are EDT0L of index 1
 
 TODO:
+ * strenthen the result on LULT grammars to one which is more restructive (i.e., that every nonterminal appears at most
+ once in the relevant derivation sequence.)
  * prove that EDT0L languages are closed under string transductions
 
-Generated documentation is available from https://alexbishop.github.io/L-systems/docs
+Generated documentation is available from https://alexbishop.github.io/L-systems/docs/LSystems.html
 
 The intention of this project is to formalise the concepts and properties of EDT0L and ET0L languages in order to prove the results in the following papers.
 

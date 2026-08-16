@@ -1155,7 +1155,7 @@ private lemma NormalForm.stepP_apply_step.target_toList_eq {α V T}
         unfold State.applyTableAtIndex filterNonterminals
         refine congrArg (List.filterMap _) ?_
         have := h'.nonterminals_prop
-        simp only [State.labelSententialWord_unlabel]
+        exact Eq.symm State.labelSententialWord_unlabel
 
 private lemma NormalForm.stepP_apply_step.unlabel_eq_target_guess {α V T} [Fintype V]
   [DecidableEq α] [DecidableEq V]
@@ -1540,7 +1540,21 @@ protected lemma grammar.state.unknownNonterminals_nodup {α V T} [DecidableEq α
         simp at this
       · rename_i heq
         simp [heq] at is_lult1
-  · grind
+  · clear * - hh
+    rw [Nat.le_one_iff_eq_zero_or_eq_one]
+    left
+    induction filterNonterminals (state.sentential E s i) with
+    | nil =>
+      rfl
+    | cons x xs ih =>
+      rw [List.filter_cons]
+      split
+      · rw [List.count_cons]
+        split
+        · exfalso
+          simp_all
+        · simpa using ih
+      · exact ih
 
 protected lemma grammar.state.unknownNonterminals_length_lt {α V T} [Fintype V]
   [DecidableEq α] [DecidableEq V]
@@ -1576,7 +1590,6 @@ protected lemma grammar.state.unknownNonterminals_prop {α V T} [DecidableEq α]
   · exfalso
     rename_i heq
     unfold grammar.state.unknownNonterminals at heq
-    simp only [List.get_eq_getElem] at heq
     change let x' := _; E.rewriteSeq _ [.nonterminal x'] = _ at heq
     extract_lets x' at heq
     --
@@ -1595,7 +1608,6 @@ protected lemma grammar.state.unknownNonterminals_prop {α V T} [DecidableEq α]
   · exfalso
     rename_i a heq
     unfold grammar.state.unknownNonterminals at heq
-    simp only [List.get_eq_getElem] at heq
     change let x' := _; E.rewriteSeq _ [.nonterminal x'] = _ at heq
     extract_lets x' at heq
     --
@@ -1684,7 +1696,6 @@ protected lemma grammar.state_toList_eq {α V T} [Fintype V] [DecidableEq V] [De
     (grammar.state E w s s_derives_w is_lult i hi).toList =
     grammar.state.unknownNonterminals E s i := by
   unfold grammar.state State.toList State.get
-  simp only [List.get_eq_getElem]
   exact List.ofFn_getElem
 
 protected lemma grammar.state_guesses_eq {α V T} [Fintype V] [DecidableEq V] [DecidableEq α]

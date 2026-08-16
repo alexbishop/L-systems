@@ -9,6 +9,12 @@ public import LSystems.EDT0L.Defs
 public import LSystems.EDT0L.Union
 public import LSystems.FiniteIndexEDT0L.Defs
 
+/-!
+# Union
+
+See main theorem `Language.isEDT0LOfIndex_union`
+-/
+
 @[expose] public section
 
 namespace EDT0LGrammar
