@@ -15,7 +15,7 @@ public import LSystems.FiniteIndexEDT0L.LULT.Attach
 This file collects together results on LULT languages.  In particular, it includes the following:
 * `LSystems.FiniteIndexEDT0L.LULT.Defs`
   Definition of LULT grammars
-* `LSystems.FiniteIndexEDT0L.LULT.Basis`
+* `LSystems.FiniteIndexEDT0L.LULT.Basic`
   currently only contains the theorem `Language.isLULT_iff_isFiniteIndexEDT0L`
 * `LSystems.FiniteIndexEDT0L.LULT.Attach`
   Shows that if `E` is a LULT ET0L language, then `E.attach` is also LULT

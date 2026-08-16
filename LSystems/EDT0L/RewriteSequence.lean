@@ -11,7 +11,7 @@ public import LSystems.EDT0L.Defs
 # Sequences of rewrites
 
 Suppsose that `E : EDT0LGrammar α V T`, and that `u v : List (Symbol α V)` are two words.  Then,
-from the definitions provided in `LSystems.EDT0l.Defs`, we see that `E.Derives u v` if and only if
+from the definitions provided in `LSystems.EDT0L.Defs`, we see that `E.Derives u v` if and only if
 there exists some sequence of tables which can be used to rewrite `u` to `v`.  In this file, we give
 an alternative definition which makes this sequence of tables explicit.
 
