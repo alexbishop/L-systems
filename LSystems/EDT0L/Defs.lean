@@ -141,11 +141,10 @@ set of nonterminals and terminals are of the form `Fin n` and `Fin m`, respectiv
 
 Our main goal in this file is to show that we can assume without loss of generality that any given
 EDT0L grammar is of this form.  We prove this fact in the theorem
-`edt0l_grammars_generate_edt0l_languages`, at the end of this module.
+`EDT0LGrammar.language_isEDT0L`, at the end of this module.
 -/
 def Language.IsEDT0L {α : Type*} (L : Language α) : Prop :=
   ∃ n m : ℕ, ∃ E : EDT0LGrammar α (Fin n) (Fin m), E.language = L
-
 
 /-!
 ### Basic lemmas
